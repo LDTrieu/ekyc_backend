@@ -8,10 +8,10 @@ import (
 )
 
 type Info struct {
-	PrePriveKey string `firestore:"pre_priv_key"`
-	// FacepayPrePublic string `firestore:""`
+	PrePrivKey string `firestore:"pre_priv_key"`
+	//FacepayPrePublic string `firestore:"facepay_account_service_public_key"`
 	LogBucket      string `firestore:"log_bucket"`
-	EkycFileBucket string `firestore:"ekyc_file_bucket"`
+	MposFileBucket string `firestore:"mpos_file_bucket"`
 }
 
 var (
