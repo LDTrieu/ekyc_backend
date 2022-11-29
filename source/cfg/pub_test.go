@@ -10,7 +10,7 @@ func Test_Get(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if len(info.PrePriveKey) == 0 {
+	if len(info.PrePrivKey) == 0 {
 		t.Fatal("prePreiKey invalid")
 	}
 	if len(info.LogBucket) == 0 {
