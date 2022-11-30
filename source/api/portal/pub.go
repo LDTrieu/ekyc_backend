@@ -12,13 +12,13 @@ import (
 
 func Reg(router *gin.Engine) {
 	router.GET("/ws/connect", websocketConnection)
-	router.GET("/ping", Ping)
+	router.GET("/ping", ping)
 	router.GET("/login/qr/download/:qrId/:reqId", downloadQR)
 	router.GET("/login/qr/rend/:reqId", rendQRLogin)
 
 }
 
-func Ping(c *gin.Context) {
+func ping(c *gin.Context) {
 	c.JSON(http.StatusOK, gin.H{
 		"code":    http.StatusOK,
 		"message": "OKE",

@@ -27,6 +27,15 @@ type PersonProfileModel struct {
 	Token     string `json:"token" firestore:"token"`
 }
 
+func (me *personProfileFs) Add(ctx context.Context, accountId,
+	sessionId, token string) (id string, err error) {
+	var item = PersonProfileModel{
+		AccountId: accountId,
+		SessionId: sessionId,
+		Token:     token,
+	}
+	return add(ctx, me.coll, item)
+}
 func (ins *personProfileFs) GetSessionID(ctx context.Context, token string) (
 	id string, session_id string, ok bool, err error) {
 	var (
