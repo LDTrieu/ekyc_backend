@@ -48,3 +48,18 @@ func (me *loginSession) GetToken(
 	}
 	return temp.JWT, true, nil
 }
+
+func (me *loginSession) GetSessionId(ctx context.Context, token string) (
+	id string, session_id string, ok bool, err error) {
+	var (
+		temp LoginSessionModel
+	)
+	id, err = getOneEqual(ctx, &temp, me.coll, "jwt", token)
+	if err == model.ErrDocNotFound {
+		return "", "", false, nil
+	}
+	if err != nil {
+		return "", "", false, err
+	}
+	return id, temp.SessionId, true, nil
+}

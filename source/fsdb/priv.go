@@ -8,6 +8,7 @@ import (
 	"time"
 
 	"cloud.google.com/go/firestore"
+	"google.golang.org/api/iterator"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
 )
@@ -49,4 +50,43 @@ func getById(ctx context.Context, obj interface{}, coll, id string) (
 	dur := time.Since(t0).Milliseconds()
 	wlog.Info(ctx, coll, " getByID ", dur, " milliseconds")
 	return
+}
+
+func getOneEqual(ctx context.Context, obj interface{},
+	coll, field string, val interface{}) (
+	id string, err error) {
+	count := 0
+	t0 := time.Now()
+	err = gcloud.RunFS(ctx, coll,
+		func(collectionRef *firestore.CollectionRef) error {
+			iter := collectionRef.Where(field, "==", val).Limit(1).Documents(ctx)
+			for {
+				doc, err := iter.Next()
+				if err == iterator.Done {
+					break
+				}
+				if err != nil {
+					return err
+				}
+
+				id = doc.Ref.ID
+				err = doc.DataTo(obj)
+				if err != nil {
+					return err
+				}
+				count++
+			}
+			return nil
+		})
+	if err != nil {
+		wlog.Info(ctx, coll, " getOneEqual ", err)
+		return
+	}
+	//---
+	dur := time.Since(t0).Milliseconds()
+	wlog.Info(ctx, coll, " getOneEqual ", dur, "| key", field, "==", val, "| result:", count > 0)
+	if count == 0 {
+		return "", model.ErrDocNotFound
+	}
+	return id, nil
 }

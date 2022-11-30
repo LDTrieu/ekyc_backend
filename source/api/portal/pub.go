@@ -11,6 +11,7 @@ import (
 )
 
 func Reg(router *gin.Engine) {
+	router.GET("/ws/connect", websocketConnection)
 	router.GET("/ping", Ping)
 	router.GET("/login/qr/download/:qrId/:reqId", downloadQR)
 	router.GET("/login/qr/rend/:reqId", rendQRLogin)
