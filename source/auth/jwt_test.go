@@ -17,7 +17,7 @@ func Test_JWT_Full(t *testing.T) {
 		t.Errorf("GenerateJWTLoginSession: %+v\n", err)
 		return
 	}
-	data, status, err := ValidateLoginSessionJWT(ctx, login_access.Token)
+	data, status, err := ValidateLoginJWT(ctx, login_access.Token)
 	if err != nil {
 		t.Errorf("ValidateLoginJWT: %+v\n", err)
 		return

@@ -24,7 +24,7 @@ func GenerateJWTLoginSession(ctx context.Context, session_id, account_id string)
 		})
 }
 
-func ValidateLoginSessionJWT(ctx context.Context, jwt_token string) (
+func ValidateLoginJWT(ctx context.Context, jwt_token string) (
 	*DataJWT, token.Status, error) {
 	jwtKey, err := loadPrePrivKey(ctx)
 	if err != nil {

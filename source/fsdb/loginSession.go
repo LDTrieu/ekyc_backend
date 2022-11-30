@@ -63,3 +63,7 @@ func (me *loginSession) GetSessionId(ctx context.Context, token string) (
 	}
 	return id, temp.SessionId, true, nil
 }
+
+func (ins *loginSession) Revoke(ctx context.Context, id string) error {
+	return delete(ctx, ins.coll, id)
+}

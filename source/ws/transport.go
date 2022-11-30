@@ -8,7 +8,9 @@ import (
 type WebsocketType string
 
 const (
-	CmdLoginRedirect WebsocketType = "LOGIN_REDIREC"
+	CmdLoginRedirect      WebsocketType = "LOGIN_REDIREC"
+	RedirectStoreRegister RedirectType  = "STORE_REGISTER"
+	RedirectStoreSubmited RedirectType  = "STORE_SUBMITED"
 	//CmdPortalNotify  WebsocketType = "PORTAL_NOTIFY"
 )
 
@@ -24,8 +26,13 @@ type WsRequestModel struct {
 	/*
 		Fileds for LOGIN_REDIREC
 	*/
-	JWT      string       `json:"jwt, omitempty"`
-	Redirect RedirectType `json:"redirect,omitempty"` // MISS_WALLET; LOGIN; STORE_REGISTER; STORE_SUBMITED
+	JWT           string       `json:"jwt,omitempty"`
+	Redirect      RedirectType `json:"redirect,omitempty"` // MISS_WALLET; LOGIN; STORE_REGISTER; STORE_SUBMITED
+	PersonProfile struct {
+		AccountId string `json:"accId,omitempty"`
+		Fullname  string `json:"fullName,omitempty"`
+		IsBlocked bool   `json:"isBlocked"`
+	} `json:"personProfile,omitempty"`
 }
 
 var Station = &station{
