@@ -26,4 +26,5 @@ func Test_JWT_Full(t *testing.T) {
 		t.Logf("STEP_1: ValidateLoginJWT STATUS= %+v\n", status)
 		t.Logf("STEP_1: ValidateLoginJWT DATA= %+v\n", data)
 	}
+	//	t.Fatal("data", data)
 }

@@ -17,7 +17,7 @@ func GetSecret(ctx context.Context, keyName string) (
 	}
 	defer client.Close()
 	pid := getPid(ctx)
-	name := fmt.Sprintf("projects/%v/secrets/%v/versions/1", pid, keyName)
+	name := fmt.Sprintf("projects/%v/secrets/%v/versions/2", pid, keyName)
 	// Build the request.
 	req := &secretmanagerpb.
 		AccessSecretVersionRequest{
