@@ -163,3 +163,13 @@ func websocketConnection(c *gin.Context) {
 		println("Error:", err.Error())
 	}
 }
+
+/* */
+func __loginBasic(ctx context.Context,
+	request *loginBasicRequest) (loginBasicResponse, error) {
+	if err := request.Credentials.validate(); err != nil {
+		return loginBasicResponse{Code: model.StatusBadRequest,
+			Message: err.Error()}, err
+	}
+	return loginBasicResponse{}, nil
+}

@@ -15,6 +15,7 @@ func Reg(router *gin.Engine) {
 	router.GET("/ping", ping)
 	router.GET("/login/qr/download/:qrId/:reqId", downloadQR)
 	router.GET("/login/qr/rend/:reqId", rendQRLogin)
+	router.POST("/login/auth/:reqId", loginBasic)
 
 }
 
@@ -25,6 +26,38 @@ func ping(c *gin.Context) {
 	})
 }
 
+func loginBasic(c *gin.Context) {
+	var (
+		request = loginBasicRequest{
+			traceField: traceField{
+				RequestId: c.Param("reqId"),
+			},
+		}
+	)
+	if err := c.BindJSON(&request); err != nil {
+		c.AbortWithError(http.StatusBadRequest, err)
+		return
+	}
+	resp, err := __loginBasic(c.Request.Context(), &request)
+	if err != nil {
+		wlog.Error(c, err)
+		c.AbortWithError(http.StatusBadRequest, err)
+		return
+	}
+
+	// Mock
+	resp.Payload = login_basic_data{
+		Id:       "123",
+		FullName: "full name mock",
+		Email:    "email",
+		Token:    "abc.123.xyz",
+	}
+
+	// Trace client and result
+	resp.traceField = request.traceField
+	c.JSON(http.StatusOK, resp)
+
+}
 func rendQRLogin(c *gin.Context) {
 	var (
 		request = rendQRLoginRequest{
