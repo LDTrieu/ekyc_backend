@@ -166,10 +166,78 @@ func websocketConnection(c *gin.Context) {
 
 /* */
 func __loginBasic(ctx context.Context,
-	request *loginBasicRequest) (loginBasicResponse, error) {
-	if err := request.Credentials.validate(); err != nil {
-		return loginBasicResponse{Code: model.StatusBadRequest,
+	request *loginBasicRequest) (
+	loginBasicResponse, error) {
+	if err := request.validate(); err != nil {
+		return loginBasicResponse{
+			Code:    model.StatusBadRequest,
 			Message: err.Error()}, err
 	}
-	return loginBasicResponse{}, nil
+	// Mock
+	payload := login_basic_data{
+		Id:       "123",
+		FullName: "full name mock",
+		Email:    "email",
+		Token:    "abc.123.xyz",
+	}
+	// select hash password, id,.. from email,
+	// create signup function
+	// if not match return
+	// if match // gen and save token
+	//
+
+	return loginBasicResponse{
+		Payload: payload,
+	}, nil
+}
+
+/* */
+
+func __signupBasic(ctx context.Context,
+	request *signupBasicRequest) (
+	signupBasicResponse, error) {
+	if err := request.validate(); err != nil {
+		return signupBasicResponse{
+			Code:    model.StatusBadRequest,
+			Message: err.Error()}, err
+	}
+	// check email exist
+	id, _, _, err := fsdb.PersonProfile.GetByEmail(ctx, request.Email)
+	if err != nil {
+		return signupBasicResponse{
+			Code:    model.StatusBadRequest,
+			Message: err.Error()}, err
+	}
+
+	if len(id) != 0 {
+		return signupBasicResponse{
+				Code:    model.StatusEmailDuplicated,
+				Message: "email already exists"},
+			errors.New("email already exists")
+	}
+	// check phone number exist
+	id, _, _, err = fsdb.PersonProfile.GetByPhone(ctx, request.PhoneNumber)
+	if err != nil {
+		return signupBasicResponse{
+			Code:    model.StatusBadRequest,
+			Message: err.Error()}, err
+	}
+	if len(id) != 0 {
+		return signupBasicResponse{
+				Code:    model.StatusPhoneNumberDuplicated,
+				Message: "phone number already exists"},
+			errors.New("phone number already exists")
+
+	}
+
+	// hashedPassword, err := bcrypt.
+	// 	GenerateFromPassword([]byte(request.Credentials.Password), 8)
+	// if err != nil{
+	// 	return signupBasicResponse{
+	// 		Code:
+	// 	}
+	// }
+	return signupBasicResponse{
+		//Payload: payload,
+	}, nil
 }

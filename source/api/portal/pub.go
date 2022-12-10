@@ -5,6 +5,7 @@ import (
 	"ekyc-app/package/wlog"
 	"ekyc-app/source/fsdb"
 	"errors"
+	"log"
 	"net/http"
 
 	"github.com/gin-gonic/gin"
@@ -16,6 +17,7 @@ func Reg(router *gin.Engine) {
 	router.GET("/login/qr/download/:qrId/:reqId", downloadQR)
 	router.GET("/login/qr/rend/:reqId", rendQRLogin)
 	router.POST("/login/auth/:reqId", loginBasic)
+	router.POST("/signup/auth/:reqId", signupBasic)
 
 }
 
@@ -26,38 +28,6 @@ func ping(c *gin.Context) {
 	})
 }
 
-func loginBasic(c *gin.Context) {
-	var (
-		request = loginBasicRequest{
-			traceField: traceField{
-				RequestId: c.Param("reqId"),
-			},
-		}
-	)
-	if err := c.BindJSON(&request); err != nil {
-		c.AbortWithError(http.StatusBadRequest, err)
-		return
-	}
-	resp, err := __loginBasic(c.Request.Context(), &request)
-	if err != nil {
-		wlog.Error(c, err)
-		c.AbortWithError(http.StatusBadRequest, err)
-		return
-	}
-
-	// Mock
-	resp.Payload = login_basic_data{
-		Id:       "123",
-		FullName: "full name mock",
-		Email:    "email",
-		Token:    "abc.123.xyz",
-	}
-
-	// Trace client and result
-	resp.traceField = request.traceField
-	c.JSON(http.StatusOK, resp)
-
-}
 func rendQRLogin(c *gin.Context) {
 	var (
 		request = rendQRLoginRequest{
@@ -101,4 +71,61 @@ func downloadQR(c *gin.Context) {
 		c.AbortWithError(http.StatusServiceUnavailable, err)
 		return
 	}
+}
+
+/* */
+func loginBasic(c *gin.Context) {
+	var (
+		request = loginBasicRequest{
+			traceField: traceField{
+				RequestId: c.Param("reqId"),
+			},
+		}
+	)
+	if err := c.BindJSON(&request); err != nil {
+		c.AbortWithError(http.StatusBadRequest, err)
+		return
+	}
+	resp, err := __loginBasic(c.Request.Context(), &request)
+	if err != nil {
+		wlog.Error(c, err)
+		c.AbortWithError(http.StatusBadRequest, err)
+		return
+	}
+
+	// Trace client and result
+	resp.traceField = request.traceField
+	c.JSON(http.StatusOK, resp)
+
+}
+
+/* */
+func signupBasic(c *gin.Context) {
+	var (
+		request = signupBasicRequest{
+			traceField: traceField{
+				RequestId: c.Param("reqId"),
+			},
+		}
+	)
+	if err := c.BindJSON(&request); err != nil {
+		c.AbortWithError(http.StatusBadRequest, err)
+		return
+	}
+	resp, err := __signupBasic(c.Request.Context(),
+		&request)
+	if err != nil {
+		log.Println("err code 191")
+		wlog.Error(c, err)
+		// c.AbortWithError(resp.Code, err)
+		// c.JSON(resp.Code, resp)
+		//	return
+
+	}
+	log.Println("err code	resp.Code", resp.Code)
+
+	// Trace client and result
+	resp.traceField = request.traceField
+	c.JSON(http.StatusOK, resp)
+
 }

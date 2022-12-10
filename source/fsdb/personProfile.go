@@ -3,6 +3,7 @@ package fsdb
 import (
 	"context"
 	"ekyc-app/source/model"
+	"time"
 )
 
 type personProfileFs struct {
@@ -10,6 +11,14 @@ type personProfileFs struct {
 	fieldAccountId string
 	fieldSessionId string
 	fieldToken     string
+	fieldFullName  string
+	// fieldStudentId string
+	fieldEmail          string
+	fieldPhoneNumber    string
+	fieldHashedPassword string
+	fieldBirthday       string
+	fieldCreatedDate    string
+	fieldModifiedDate   string
 }
 
 var PersonProfile = &personProfileFs{
@@ -17,14 +26,28 @@ var PersonProfile = &personProfileFs{
 	fieldAccountId: "account_id",
 	fieldSessionId: "session_id",
 	fieldToken:     "token",
+	fieldFullName:  "full_name",
+	// fieldStudentId:      "student_id",
+	fieldEmail:          "email",
+	fieldPhoneNumber:    "phone_number",
+	fieldHashedPassword: "hashed_password",
+	fieldBirthday:       "birthday",
+	fieldCreatedDate:    "created_date",
+	fieldModifiedDate:   "modified_date",
 }
 
 type PersonProfileModel struct {
 	AccountId string `json:"accountId" firestore:"account_id"`
-	//DisplayName       string           `json:"displayName" firestore:"display_name"`
-	//PhoneNumber       string           `json:"phoneNumber" firestore:"phone_number"`
 	SessionId string `json:"sessionId" firestore:"session_id"`
 	Token     string `json:"token" firestore:"token"`
+	FullName  string `json:"fullname" firestore:"full_name"`
+	// StudentId      string    `json:"studentId" firestore:"student_id"`
+	Email          string    `json:"email" firestore:"email"`
+	PhoneNumber    string    `json:"phoneNumber" firestore:"phone_number"`
+	HashedPassword string    `json:"hashedPassword" firestore:"hashed_password"`
+	Birthday       time.Time `json:"birthday" firestore:"birthday"`
+	CreatedDate    time.Time `json:"createdDate" firestore:"created_date"`
+	ModifiedDate   time.Time `json:"modifiedDate" firestore:"modified_date"`
 }
 
 func (me *personProfileFs) Add(ctx context.Context, accountId,
@@ -44,6 +67,14 @@ func (ins *personProfileFs) AddPersonProfile(ctx context.Context,
 	}
 	return nil
 }
+
+// func (ins *personProfileFs) CreateProfileSignUpBasic(ctx context.Context,
+// 	personProfile *PersonProfileModel) error {
+// 	// check email exist
+// 	ins.GetByAccountId()
+
+//		return nil
+//	}
 func (ins *personProfileFs) CreateIfNotExist(ctx context.Context, account_id, session_id, token string) (*PersonProfileModel, bool, error) {
 	id, inf, ok, err := ins.GetByAccountId(ctx, account_id)
 	if err != nil {
@@ -99,6 +130,37 @@ func (ins *personProfileFs) GetByAccountId(ctx context.Context, account_id strin
 		return "", nil, false, err
 	}
 	return id, &temp, true, nil
+}
+
+func (ins *personProfileFs) GetByEmail(ctx context.Context, email string) (
+	id string, info *PersonProfileModel, ok bool, err error) {
+	var (
+		temp PersonProfileModel
+	)
+	id, err = getOneEqual(ctx, &temp, ins.coll, ins.fieldEmail, email)
+	if err == model.ErrDocNotFound {
+		return "", nil, false, nil
+	}
+	if err != nil {
+		return "", nil, false, err
+	}
+	return id, &temp, true, nil
+
+}
+func (ins *personProfileFs) GetByPhone(ctx context.Context, numberPhone string) (
+	id string, info *PersonProfileModel, ok bool, err error) {
+	var (
+		temp PersonProfileModel
+	)
+	id, err = getOneEqual(ctx, &temp, ins.coll, ins.fieldPhoneNumber, numberPhone)
+	if err == model.ErrDocNotFound {
+		return "", nil, false, nil
+	}
+	if err != nil {
+		return "", nil, false, err
+	}
+	return id, &temp, true, nil
+
 }
 
 func (ins *personProfileFs) SetToken(ctx context.Context, docId string, session_id, token string) error {
