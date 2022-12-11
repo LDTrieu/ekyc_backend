@@ -23,5 +23,6 @@ const (
 	StatusServiceUnavailable  = 53
 	StatusGatewayTimeout      = 54
 
-	StatusEmailDuplicated = 191
+	StatusEmailDuplicated       = 191
+	StatusPhoneNumberDuplicated = 192
 )

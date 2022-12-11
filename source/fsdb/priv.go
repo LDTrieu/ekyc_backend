@@ -90,3 +90,38 @@ func getOneEqual(ctx context.Context, obj interface{},
 	}
 	return id, nil
 }
+
+func delete(ctx context.Context, coll, id string) (err error) {
+	t0 := time.Now()
+	err = gcloud.RunFS(ctx, coll,
+		func(collectionRef *firestore.CollectionRef) error {
+			_, err := collectionRef.Doc(id).Delete(ctx)
+			if err != nil {
+				if status.Code(err) == codes.NotFound {
+					return model.ErrDocNotFound
+				}
+				return err
+			}
+			return nil
+		})
+	dur := time.Since(t0).Milliseconds()
+	wlog.Info(ctx, coll, " delete ", dur)
+	return err
+}
+func updateFields(ctx context.Context, id, coll string, obj map[string]interface{}) error {
+	if len(id) == 0 {
+		return model.ErrDocIdEmpty
+	}
+	t0 := time.Now()
+	err := gcloud.RunFS(ctx, coll,
+		func(collectionRef *firestore.CollectionRef) error {
+			_, err := collectionRef.Doc(id).Set(ctx, obj, firestore.MergeAll)
+			if err != nil {
+				return err
+			}
+			return nil
+		})
+	dur := time.Since(t0).Milliseconds()
+	wlog.Info(ctx, coll, " set ", dur)
+	return err
+}

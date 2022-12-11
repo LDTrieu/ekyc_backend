@@ -16,6 +16,8 @@ import (
 	"github.com/gin-gonic/gin"
 	"github.com/google/uuid"
 	"github.com/gorilla/websocket"
+	"go.mongodb.org/mongo-driver/bson/primitive"
+	"golang.org/x/crypto/bcrypt"
 )
 
 func guestRendQRLogin(ctx context.Context,
@@ -162,4 +164,126 @@ func websocketConnection(c *gin.Context) {
 	if err := socket.Listen(r, conn, read, write); err != nil {
 		println("Error:", err.Error())
 	}
+}
+
+/* */
+func __loginBasic(ctx context.Context,
+	request *loginBasicRequest) (
+	loginBasicResponse, error) {
+	var (
+		login_session_id = uuid.NewString()
+	)
+	if err := request.validate(); err != nil {
+		return loginBasicResponse{
+			Code:    model.StatusBadRequest,
+			Message: err.Error()}, err
+	}
+
+	// Select from DB
+	// check email exist, and check hashed password
+	// get info
+	docId, accountId, fullName, phoneNumber, birthday, err := fsdb.PersonProfile.CheckLogin(ctx, request.Email, request.Password)
+	if err != nil {
+		return loginBasicResponse{
+			Code:    model.StatusForbidden,
+			Message: err.Error()}, err
+	}
+	// gen and save token
+	_, jwt_login, err := auth.GenerateJWTLoginSession(
+		ctx, login_session_id, accountId)
+	if err != nil {
+		return loginBasicResponse{
+			Code:    model.StatusInternalServerError,
+			Message: err.Error()}, err
+	}
+	// save to cache
+	_, err = fsdb.LoginSessionDBC.Add(ctx, login_session_id, jwt_login.Token, jwt_login.ExpiresAt)
+	if err != nil {
+		return loginBasicResponse{
+			Code:    model.StatusServiceUnavailable,
+			Message: err.Error()}, err
+	}
+	// save to profile
+	err = fsdb.PersonProfile.SetToken(ctx, docId, login_session_id, jwt_login.Token)
+	if err != nil {
+		return loginBasicResponse{
+			Code:    model.StatusServiceUnavailable,
+			Message: err.Error()}, err
+	}
+
+	payload := login_basic_data{
+		AccountId:   accountId,
+		FullName:    fullName,
+		Email:       request.Email,
+		PhoneNumber: phoneNumber,
+		Birthday:    birthday,
+		Token:       jwt_login.Token,
+	}
+
+	return loginBasicResponse{
+		Payload: payload,
+	}, nil
+}
+
+/* */
+
+func __signupBasic(ctx context.Context,
+	request *signupBasicRequest) (
+	signupBasicResponse, error) {
+	if err := request.validate(); err != nil {
+		return signupBasicResponse{
+			Code:    model.StatusBadRequest,
+			Message: err.Error()}, err
+	}
+	// check email exist
+	id, _, _, err := fsdb.PersonProfile.GetByEmail(ctx, request.Email)
+	if err != nil {
+		return signupBasicResponse{
+			Code:    model.StatusBadRequest,
+			Message: err.Error()}, err
+	}
+
+	if len(id) != 0 {
+		return signupBasicResponse{
+				Code:    model.StatusEmailDuplicated,
+				Message: "email already exists"},
+			errors.New("email already exists")
+	}
+	// check phone number exist
+	id, _, _, err = fsdb.PersonProfile.GetByPhone(ctx, request.PhoneNumber)
+	if err != nil {
+		return signupBasicResponse{
+			Code:    model.StatusBadRequest,
+			Message: err.Error()}, err
+	}
+	if len(id) != 0 {
+		return signupBasicResponse{
+				Code:    model.StatusPhoneNumberDuplicated,
+				Message: "phone number already exists"},
+			errors.New("phone number already exists")
+	}
+	hashedPassword, err := bcrypt.GenerateFromPassword(
+		[]byte(request.Password), 8)
+
+	if err != nil {
+		return signupBasicResponse{
+			Code:    model.StatusBadRequest,
+			Message: err.Error()}, err
+	}
+	// Insert to DB
+	accountId := primitive.NewObjectID().Hex()
+	sessionId := uuid.NewString()
+	info, _, err := fsdb.PersonProfile.CreateSignupProfile(ctx, accountId, sessionId, request.Email, request.PhoneNumber, request.FullName, string(hashedPassword))
+	if err != nil {
+		return signupBasicResponse{
+			Code:    model.StatusInternalServerError,
+			Message: err.Error()}, err
+	}
+
+	return signupBasicResponse{
+		Payload: signup_basic_data{
+			AccountId: info.AccountId,
+			Email:     info.Email,
+		},
+	}, nil
 }
