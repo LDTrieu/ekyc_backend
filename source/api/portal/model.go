@@ -2,6 +2,7 @@ package portal
 
 import (
 	"errors"
+	"time"
 )
 
 const (
@@ -50,10 +51,12 @@ type loginBasicResponse struct {
 }
 
 type login_basic_data struct {
-	Id       string `json:"id"`
-	FullName string `json:"fullName"`
-	Email    string `json:"email"`
-	Token    string `json:"token"`
+	AccountId   string    `json:"accountId"`
+	FullName    string    `json:"fullName"`
+	Email       string    `json:"email"`
+	PhoneNumber string    `json:"phoneNumber"`
+	Birthday    time.Time `json:"birthday"`
+	Token       string    `json:"token"`
 }
 
 func (ins *Credentials) validate() error {
@@ -84,10 +87,8 @@ type signupBasicResponse struct {
 }
 
 type signup_basic_data struct {
-	// Id string `json:"id"`
-	// FullName string `json:"fullName"`
-	// Email    string `json:"email"`
-	Token string `json:"token"`
+	AccountId string `json:"accountId"`
+	Email     string `json:"email"`
 }
 
 func (ins *signupBasicRequest) validate() error {
@@ -103,24 +104,3 @@ func (ins *signupBasicRequest) validate() error {
 	return nil
 
 }
-
-/*
-	// check email exist
-	id, _, _, err := fsdb.PersonProfile.GetByEmail(ctx, ins.Email)
-	if err != nil {
-		return err
-	}
-	if len(id) != 0 {
-		return errors.New("email already exists")
-	}
-
-	// check phone number exist
-	id, _, _, err := fsdb.PersonProfile.GetByPhone(ctx, ins.)
-	if err != nil {
-		return err
-	}
-	if len(id) != 0 {
-		return errors.New("phone number already exists")
-	}
-
-*/

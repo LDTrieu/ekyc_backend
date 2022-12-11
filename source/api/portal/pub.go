@@ -5,7 +5,6 @@ import (
 	"ekyc-app/package/wlog"
 	"ekyc-app/source/fsdb"
 	"errors"
-	"log"
 	"net/http"
 
 	"github.com/gin-gonic/gin"
@@ -89,8 +88,6 @@ func loginBasic(c *gin.Context) {
 	resp, err := __loginBasic(c.Request.Context(), &request)
 	if err != nil {
 		wlog.Error(c, err)
-		c.AbortWithError(http.StatusBadRequest, err)
-		return
 	}
 
 	// Trace client and result
@@ -115,14 +112,8 @@ func signupBasic(c *gin.Context) {
 	resp, err := __signupBasic(c.Request.Context(),
 		&request)
 	if err != nil {
-		log.Println("err code 191")
 		wlog.Error(c, err)
-		// c.AbortWithError(resp.Code, err)
-		// c.JSON(resp.Code, resp)
-		//	return
-
 	}
-	log.Println("err code	resp.Code", resp.Code)
 
 	// Trace client and result
 	resp.traceField = request.traceField
