@@ -13,6 +13,34 @@ import (
 	"google.golang.org/grpc/status"
 )
 
+type OrderBy struct {
+	Key       string
+	Direction firestore.Direction
+}
+
+type FilterOperation string
+
+const (
+	LessThan         string = "<"
+	LessThanEqual    string = "<="
+	Equal            string = "=="
+	GreaterThan      string = ">"
+	GreaterThanEqual string = ">="
+	NotEqual         string = "!="
+	In               string = "in"
+	NotIn            string = "not-in"
+	ArrayContains    string = "array-contains"
+	ArrayContainsAny string = "array-contains-any"
+)
+
+func run(ctx context.Context, coll string, excute func(collectionRef *firestore.CollectionRef) error) error {
+	t0 := time.Now()
+	err := gcloud.RunFS(ctx, coll, excute)
+	dur := time.Since(t0).Milliseconds()
+	wlog.Info(ctx, coll, " query firestore ", dur)
+	return err
+}
+
 // Add generates a DocumentRef with a unique ID.
 func add(ctx context.Context, coll string, obj interface{}) (id string, err error) {
 	t0 := time.Now()

@@ -1,6 +1,8 @@
 package portal
 
 import (
+	"ekyc-app/source/auth"
+	"ekyc-app/source/fsdb"
 	"errors"
 	"time"
 )
@@ -103,4 +105,96 @@ func (ins *signupBasicRequest) validate() error {
 	}
 	return nil
 
+}
+
+/* */
+type filterListUserRequest struct {
+	traceField
+	Permit *auth.DataJWT
+	//	Payload list_user_req `json:"payload"`
+}
+
+type filterListUserResponse struct {
+	traceField
+	Code    int            `json:"code"`
+	Message string         `json:"message"`
+	Payload list_user_resp `json:"payload"`
+}
+
+type list_user_resp struct {
+	TotalUser int         `json:"totalUser"`
+	ListUser  []user_data `json:"listUser"`
+}
+
+type user_data struct {
+	FullName    string `json:"fullName"`
+	Image       string `json:"image"`
+	PhoneNumber string `json:"phoneNumber"`
+	IsBlocked   bool   `json:"isBlocked"`
+}
+
+func withUserModel(um *fsdb.PersonProfileModel) user_data {
+	return user_data{
+		FullName:    um.FullName,
+		PhoneNumber: um.PhoneNumber,
+		// Image     : ,
+		IsBlocked: um.IsBlocked,
+	}
+}
+
+/* */
+type filterListStudentRequest struct {
+	traceField
+	Permit *auth.DataJWT
+	//	Payload list_user_req `json:"payload"`
+}
+
+type filterListStudentResponse struct {
+	traceField
+	Code    int               `json:"code"`
+	Message string            `json:"message"`
+	Payload list_student_resp `json:"payload"`
+}
+
+type list_student_resp struct {
+	Stash        int            `json:"stash"`
+	TotalStudent int            `json:"totalStudent"`
+	ListStudent  []student_data `json:"listStudent"`
+}
+
+type student_data struct {
+	FullName  string `json:"fullName"`
+	Image     string `json:"image"`
+	StudentId string `json:"studentId"`
+	IsBlocked bool   `json:"isBlocked"`
+}
+
+func withStudentModel(um *fsdb.StudentProfileModel) student_data {
+	return student_data{
+		FullName:  um.FullName,
+		StudentId: um.StudentId,
+		// Image     : ,
+		IsBlocked: um.IsBlocked,
+	}
+}
+
+/* */
+type createStudentProfileRequest struct {
+	traceField
+	Permit  *auth.DataJWT
+	Payload student_profile_data `json:"payload"`
+}
+
+type createStudentProfileResponse struct {
+	traceField
+	Code    int    `json:"code"`
+	Message string `json:"message"`
+	//Payload list_student_resp `json:"payload"`
+}
+
+type student_profile_data struct {
+	FullName  string `json:"fullName"`
+	Image     string `json:"image"`
+	StudentId string `json:"studentId"`
+	IsBlocked bool   `json:"isBlocked"`
 }

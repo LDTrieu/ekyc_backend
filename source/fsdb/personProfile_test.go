@@ -58,10 +58,10 @@ func Test_CheckLogin(t *testing.T) {
 	email := "letrieu106@gmail.com"
 	//hashed_password := "$2a$08$uWs19KsmPgZ8LGZEcsDz6O7wt/AgScVrQ27qx3lUE0sf5kAPZcIuW"
 	password := ""
-	id, account_id, full_name, phone_number, birthday, err := PersonProfile.CheckLogin(ctx, email, password)
+	id, account_id, full_name, phone_number, birthday, isBlocked, err := PersonProfile.CheckLogin(ctx, email, password)
 	if err != nil {
 		t.Fatal("ERR1: ", err)
 	}
-	log.Println("OKE: ", id, "  ", account_id, "  ", full_name, "  ", phone_number, "  ", birthday)
+	log.Println("OKE: ", id, "  ", account_id, "  ", full_name, "  ", phone_number, "  ", birthday, isBlocked)
 
 }

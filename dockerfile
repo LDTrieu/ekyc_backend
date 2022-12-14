@@ -1,7 +1,7 @@
 # Use base golang image from Docker Hub
 FROM golang:1.19 AS build
 
-WORKDIR /ekyc-services
+WORKDIR /ekyc-services-name
 
 # Install dependencies in go.mod and go.sum
 COPY go.mod go.sum ./
@@ -25,7 +25,7 @@ FROM gcr.io/distroless/base
 ENV GOTRACEBACK=single
 
 # Copy template & assets
-WORKDIR /ekyc-services
+WORKDIR /ekyc-services-name
 COPY --from=build /app ./app
 
 ENTRYPOINT ["./app"]
