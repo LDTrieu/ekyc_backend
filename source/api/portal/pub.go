@@ -18,6 +18,9 @@ func Reg(router *gin.Engine) {
 	router.POST("/login/auth/:reqId", loginBasic)
 	router.POST("/signup/auth/:reqId", signupBasic)
 
+	router.GET("portal/filterListUser/:reqId", filterListUser)
+	router.GET("portal/filterListStudent/:reqId", filterListStudent)
+	router.POST("portal/createStudentProfile/:reqId", createStudentProfile)
 }
 
 func ping(c *gin.Context) {
@@ -119,4 +122,96 @@ func signupBasic(c *gin.Context) {
 	resp.traceField = request.traceField
 	c.JSON(http.StatusOK, resp)
 
+}
+
+/* */
+func filterListUser(c *gin.Context) {
+	// validate token
+	status, _, from, err := validateBearer(c.Request.Context(), c.Request)
+	if err != nil {
+		c.AbortWithError(status, err)
+		return
+	}
+	var (
+		request = filterListUserRequest{
+			traceField: traceField{
+				RequestId: c.Param("reqId"),
+			},
+			Permit: from,
+		}
+	)
+	// if err := c.BindJSON(&request.Payload); err != nil {
+	// 	c.AbortWithError(http.StatusBadRequest, err)
+	// 	return
+	// }
+	resp, err := __filterListUser(c.Request.Context(), &request)
+	if err != nil {
+		wlog.Error(c, err)
+	}
+
+	// Trace client and result
+	resp.traceField = request.traceField
+	c.JSON(http.StatusOK, resp)
+
+}
+
+/* */
+func filterListStudent(c *gin.Context) {
+	// validate token
+	status, _, from, err := validateBearer(c.Request.Context(), c.Request)
+	if err != nil {
+		c.AbortWithError(status, err)
+		return
+	}
+	var (
+		request = filterListStudentRequest{
+			traceField: traceField{
+				RequestId: c.Param("reqId"),
+			},
+			Permit: from,
+		}
+	)
+	// if err := c.BindJSON(&request.Payload); err != nil {
+	// 	c.AbortWithError(http.StatusBadRequest, err)
+	// 	return
+	// }
+	resp, err := __filterListStudent(c.Request.Context(), &request)
+	if err != nil {
+		wlog.Error(c, err)
+	}
+
+	// Trace client and result
+	resp.traceField = request.traceField
+	c.JSON(http.StatusOK, resp)
+
+}
+
+/* */
+func createStudentProfile(c *gin.Context) {
+	// validate token
+	status, _, from, err := validateBearer(c.Request.Context(), c.Request)
+	if err != nil {
+		c.AbortWithError(status, err)
+		return
+	}
+	var (
+		request = createStudentProfileRequest{
+			traceField: traceField{
+				RequestId: c.Param("reqId"),
+			},
+			Permit: from,
+		}
+	)
+	if err := c.BindJSON(&request.Payload); err != nil {
+		c.AbortWithError(http.StatusBadRequest, err)
+		return
+	}
+	resp, err := __createStudentProfile(c.Request.Context(), &request)
+	if err != nil {
+		wlog.Error(c, err)
+	}
+
+	// Trace client and result
+	resp.traceField = request.traceField
+	c.JSON(http.StatusOK, resp)
 }

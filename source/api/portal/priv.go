@@ -2,12 +2,15 @@ package portal
 
 import (
 	"context"
+	"ekyc-app/library/ascii"
 	"ekyc-app/package/socket"
+	"ekyc-app/package/token"
 	"ekyc-app/source/auth"
 	"ekyc-app/source/fsdb"
 	"ekyc-app/source/model"
 	"ekyc-app/source/ws"
 	"errors"
+	"fmt"
 	"log"
 	"net/http"
 	"strings"
@@ -20,6 +23,74 @@ import (
 	"golang.org/x/crypto/bcrypt"
 )
 
+func validateBearer(ctx context.Context,
+	r *http.Request) (
+	int, string, *auth.DataJWT, error) {
+	var (
+		excute = func(ctx context.Context, r *http.Request) (int, string, *auth.DataJWT, error) {
+			var (
+				// parseBearerAuth parses an HTTP Bearer Authentication string.
+				// "Bearer QWxhZGRpbjpvcGVuIHNlc2FtZQ==" returns QWxhZGRpbjpvcGVuIHNlc2FtZQ.
+				parseBearerAuth = func(auth string) (token string, ok bool) {
+					const prefix = "Bearer "
+					// Case insensitive prefix match. See Issue 22736.
+					if len(auth) < len(prefix) || !ascii.EqualFold(auth[:len(prefix)], prefix) {
+						return "", false
+					}
+					return auth[len(prefix):], true
+				}
+			)
+			headerAuth := r.Header.Get("Authorization")
+			if len(headerAuth) <= 0 {
+				return http.StatusBadRequest, "", &auth.DataJWT{}, errors.New("authorization is empty")
+			}
+			bearer_token, ok := parseBearerAuth(headerAuth)
+			if !ok {
+				return http.StatusBadRequest, "", &auth.DataJWT{}, errors.New("authorization is invalid")
+			}
+
+			// get from cache DB
+			_, account_id, ok, err := fsdb.PersonProfile.GetAccountIdByToken(ctx, bearer_token)
+			if err != nil {
+				return http.StatusForbidden, bearer_token, &auth.DataJWT{}, err
+			}
+			if !ok {
+				return http.StatusForbidden, bearer_token, &auth.DataJWT{}, errors.New("token no login")
+			}
+			jwt_data, status, err := auth.ValidateLoginJWT(ctx, bearer_token)
+			if err != nil {
+				println("ValidateLoginJWT:", err.Error())
+			}
+
+			switch status {
+			case token.INPUT_EMPTY:
+				return http.StatusForbidden, bearer_token, jwt_data, errors.New("token is empty")
+			case token.ACCESS_TOKEN_INVALID:
+				return http.StatusForbidden, bearer_token, jwt_data, errors.New("token is invalid")
+			case token.ACCESS_TOKEN_EXPIRED:
+				return http.StatusForbidden, bearer_token, jwt_data, errors.New("token is expired")
+			case token.SUCCEED:
+				if jwt_data.AccountID != account_id {
+					return http.StatusForbidden, bearer_token, jwt_data, errors.New("account_id has been changed")
+				}
+				// auth pass
+				return http.StatusOK, bearer_token, jwt_data, nil
+			default:
+				return http.StatusForbidden, bearer_token, jwt_data, errors.New("validate token exception")
+			}
+		}
+	)
+	status, token, data, err := excute(ctx, r)
+	if err != nil {
+		println("[AUTH] ", r.RequestURI, "| Error:", err.Error())
+	}
+	println("[AUTH] ", r.RequestURI, "| Status:", status)
+	println("[AUTH] ", r.RequestURI, "| Token:", token)
+	println("[AUTH] ", r.RequestURI, "| Access Rights:", fmt.Sprintf("%+v", data))
+	return status, token, data, err
+}
+
+/* */
 func guestRendQRLogin(ctx context.Context,
 	request *rendQRLoginRequest) (
 	rendQRLoginResponse, error) {
@@ -182,11 +253,17 @@ func __loginBasic(ctx context.Context,
 	// Select from DB
 	// check email exist, and check hashed password
 	// get info
-	docId, accountId, fullName, phoneNumber, birthday, err := fsdb.PersonProfile.CheckLogin(ctx, request.Email, request.Password)
+	docId, accountId, fullName, phoneNumber, birthday, isBlocked, err := fsdb.PersonProfile.CheckLogin(ctx, request.Email, request.Password)
 	if err != nil {
 		return loginBasicResponse{
 			Code:    model.StatusForbidden,
 			Message: err.Error()}, err
+	}
+
+	if isBlocked {
+		return loginBasicResponse{
+			Code:    model.StatusMethodNotAllowed,
+			Message: "account is blocked"}, errors.New("account is blocked")
 	}
 	// gen and save token
 	_, jwt_login, err := auth.GenerateJWTLoginSession(
@@ -226,7 +303,6 @@ func __loginBasic(ctx context.Context,
 }
 
 /* */
-
 func __signupBasic(ctx context.Context,
 	request *signupBasicRequest) (
 	signupBasicResponse, error) {
@@ -236,32 +312,24 @@ func __signupBasic(ctx context.Context,
 			Message: err.Error()}, err
 	}
 	// check email exist
-	id, _, _, err := fsdb.PersonProfile.GetByEmail(ctx, request.Email)
+	email_already_exist, err := fsdb.PersonProfile.ValidateEmail(ctx, request.Email)
 	if err != nil {
-		return signupBasicResponse{
-			Code:    model.StatusBadRequest,
-			Message: err.Error()}, err
+		return signupBasicResponse{Code: model.StatusServiceUnavailable, Message: err.Error()}, err
 	}
-
-	if len(id) != 0 {
-		return signupBasicResponse{
-				Code:    model.StatusEmailDuplicated,
-				Message: "email already exists"},
-			errors.New("email already exists")
+	if email_already_exist {
+		return signupBasicResponse{Code: model.StatusEmailDuplicated, Message: "DATA_ALREADY_EXIST"},
+			errors.New("email is duplicated")
 	}
 	// check phone number exist
-	id, _, _, err = fsdb.PersonProfile.GetByPhone(ctx, request.PhoneNumber)
+	phone_number_already_exist, err := fsdb.PersonProfile.ValidatePhoneNumber(ctx, request.PhoneNumber)
 	if err != nil {
-		return signupBasicResponse{
-			Code:    model.StatusBadRequest,
-			Message: err.Error()}, err
+		return signupBasicResponse{Code: model.StatusServiceUnavailable, Message: err.Error()}, err
 	}
-	if len(id) != 0 {
-		return signupBasicResponse{
-				Code:    model.StatusPhoneNumberDuplicated,
-				Message: "phone number already exists"},
-			errors.New("phone number already exists")
+	if phone_number_already_exist {
+		return signupBasicResponse{Code: model.StatusPhoneNumberDuplicated, Message: "DATA_ALREADY_EXIST"},
+			errors.New("phone number is duplicated")
 	}
+
 	hashedPassword, err := bcrypt.GenerateFromPassword(
 		[]byte(request.Password), 8)
 
@@ -286,4 +354,66 @@ func __signupBasic(ctx context.Context,
 			Email:     info.Email,
 		},
 	}, nil
+}
+
+/* */
+func __filterListUser(
+	ctx context.Context,
+	request *filterListUserRequest) (
+	filterListUserResponse, error) {
+	db_users, err := fsdb.PersonProfile.GetAll(ctx)
+	if err != nil {
+		return filterListUserResponse{
+			Code:    model.StatusServiceUnavailable,
+			Message: err.Error()}, err
+	}
+
+	var (
+		list_user = make([]user_data, 0)
+	)
+	for _, user := range db_users {
+		list_user = append(list_user, withUserModel(user))
+	}
+	return filterListUserResponse{
+		Payload: list_user_resp{
+			TotalUser: len(list_user),
+			ListUser:  list_user,
+		},
+	}, nil
+
+}
+
+/* */
+func __filterListStudent(
+	ctx context.Context,
+	request *filterListStudentRequest) (
+	filterListStudentResponse, error) {
+	db_students, err := fsdb.StudentProfile.GetAll(ctx)
+	if err != nil {
+		return filterListStudentResponse{
+			Code:    model.StatusServiceUnavailable,
+			Message: err.Error()}, err
+	}
+
+	var (
+		list_student = make([]student_data, 0)
+	)
+	for _, student := range db_students {
+		list_student = append(list_student, withStudentModel(student))
+	}
+	return filterListStudentResponse{
+		Payload: list_student_resp{
+			TotalStudent: len(list_student),
+			ListStudent:  list_student,
+		},
+	}, nil
+}
+
+/* */
+func __createStudentProfile(
+	ctx context.Context,
+	request *createStudentProfileRequest) (
+	createStudentProfileResponse, error) {
+
+	return createStudentProfileResponse{}, nil
 }
