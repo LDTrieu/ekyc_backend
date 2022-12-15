@@ -25,4 +25,6 @@ const (
 
 	StatusEmailDuplicated       = 191
 	StatusPhoneNumberDuplicated = 192
+	StatusStudentIdDuplicated   = 193
+	StatusNationalIdDuplicated  = 194
 )

@@ -4,6 +4,7 @@ import (
 	"ekyc-app/source/auth"
 	"ekyc-app/source/fsdb"
 	"errors"
+	"log"
 	"time"
 )
 
@@ -193,8 +194,104 @@ type createStudentProfileResponse struct {
 }
 
 type student_profile_data struct {
-	FullName  string `json:"fullName"`
-	Image     string `json:"image"`
+	StudentId     string    `json:"studentId"`
+	Email         string    `json:"email"`
+	FullName      string    `json:"fullName"`
+	PhoneNumber   string    `json:"phoneNumber"`
+	UnitId        string    `json:"unitId"`
+	NationalId    string    `json:"nationalId"`
+	Birthday      time.Time `json:"birthday"`
+	Sex           string    `json:"sex"`
+	Address       string    `json:"address"`
+	AddressOrigin string    `json:"addressOrigin"`
+	Image         string    `json:"image" `
+	ImageEkyc     string    `json:"imageEkyc"`
+	IsBlocked     bool      `json:"isBlocked"`
+}
+
+func (ins *student_profile_data) validate() error {
+	if len(ins.StudentId) < 1 {
+		log.Println("ins.StudentId", ins.StudentId)
+		return errors.New("field student_id is invalid")
+	}
+	if len(ins.Email) < 1 {
+		return errors.New("field Email is invalid")
+	}
+	if len(ins.FullName) < 1 {
+		return errors.New("field full_name is invalid")
+	}
+	if len(ins.UnitId) < 1 {
+		return errors.New("field unit_id is invalid")
+	}
+	if len(ins.NationalId) < 1 {
+		return errors.New("field national_id is invalid")
+	}
+	if len(ins.Address) < 1 {
+		return errors.New("field address is invalid")
+	}
+	if len(ins.Image) < 1 {
+		return errors.New("field image is invalid")
+	}
+	if len(ins.ImageEkyc) < 1 {
+		return errors.New("field image_ekyc is invalid")
+	}
+
+	return nil
+}
+
+/* */
+
+type studentDetailsRequest struct {
+	traceField
+	Permit    *auth.DataJWT
+	StudentId string
+	// Payload   student_profile_data `json:"payload"`
+}
+
+type studentDetailsResponse struct {
+	traceField
+	Code    int                  `json:"code"`
+	Message string               `json:"message"`
+	Payload student_details_data `json:"payload"`
+}
+
+type student_details_data struct {
+	StudentId     string    `json:"studentId"`
+	Email         string    `json:"email"`
+	FullName      string    `json:"fullName"`
+	PhoneNumber   string    `json:"phoneNumber"`
+	UnitId        string    `json:"unitId"`
+	NationalId    string    `json:"nationalId"`
+	Birthday      time.Time `json:"birthday"`
+	Sex           string    `json:"sex"`
+	Address       string    `json:"address"`
+	AddressOrigin string    `json:"addressOrigin"`
+	Image         string    `json:"image" `
+	ImageEkyc     string    `json:"imageEkyc"`
+	IsBlocked     bool      `json:"isBlocked"`
+	ModifiedBy    string    `json:"modifiedBy"`
+	ModifiedAt    time.Time `json:"modifiedAt"`
+	CreatedBy     string    `json:"createdBy"`
+	CreatedAt     time.Time `json:"createdAt"`
+}
+
+/* */
+type uploadFaceImageRequest struct {
+	traceField
+	Permit  *auth.DataJWT
+	Payload face_image_req `json:"payload"`
+}
+
+type uploadFaceImageResponse struct {
+	traceField
+	Code    int             `json:"code"`
+	Message string          `json:"message"`
+	Payload face_image_resp `json:"payload"`
+}
+
+type face_image_req struct {
 	StudentId string `json:"studentId"`
-	IsBlocked bool   `json:"isBlocked"`
+}
+
+type face_image_resp struct {
 }

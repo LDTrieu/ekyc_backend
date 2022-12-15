@@ -410,10 +410,101 @@ func __filterListStudent(
 }
 
 /* */
-func __createStudentProfile(
+func __submitStudentProfile(
 	ctx context.Context,
 	request *createStudentProfileRequest) (
 	createStudentProfileResponse, error) {
+	if err := request.Payload.validate(); err != nil {
+		return createStudentProfileResponse{
+			Code:    model.StatusBadRequest,
+			Message: err.Error()}, err
+	}
+	// validate fields
+	student_id_already_exist, err := fsdb.StudentProfile.ValidateStudentId(ctx, request.Payload.StudentId)
+	if err != nil {
+		return createStudentProfileResponse{Code: model.StatusServiceUnavailable, Message: err.Error()}, err
+	}
+	if student_id_already_exist {
+		return createStudentProfileResponse{Code: model.StatusStudentIdDuplicated, Message: "STUDENT_ID_ALREADY_EXIST"}, errors.New("student_id is duplicated")
+	}
+	email_already_exist, err := fsdb.StudentProfile.ValidateEmail(ctx, request.Payload.Email)
+	if err != nil {
+		return createStudentProfileResponse{Code: model.StatusServiceUnavailable, Message: err.Error()}, err
+	}
+	if email_already_exist {
+		return createStudentProfileResponse{Code: model.StatusEmailDuplicated, Message: "EMAIL_ALREADY_EXIST"}, errors.New("email is duplicated")
+	}
+	phone_number_already_exist, err := fsdb.StudentProfile.ValidatePhoneNumber(ctx, request.Payload.PhoneNumber)
+	if err != nil {
+		return createStudentProfileResponse{Code: model.StatusServiceUnavailable, Message: err.Error()}, err
+	}
+	if phone_number_already_exist {
+		return createStudentProfileResponse{Code: model.StatusPhoneNumberDuplicated, Message: "PHONE_NUMBER_ALREADY_EXIST"}, errors.New("phone number is duplicated")
+	}
+	national_id_already_exist, err := fsdb.StudentProfile.ValidateNationalId(ctx, request.Payload.NationalId)
+	if err != nil {
+		return createStudentProfileResponse{Code: model.StatusServiceUnavailable, Message: err.Error()}, err
+	}
+	if national_id_already_exist {
+		return createStudentProfileResponse{Code: model.StatusNationalIdDuplicated, Message: "NATIONAL_ID_ALREADY_EXIST"}, errors.New("national_id is duplicated")
+	}
+
+	if err := fsdb.StudentProfile.CreateStudentProfile(ctx,
+		request.Payload.StudentId,
+		request.Payload.Email,
+		request.Payload.FullName,
+		request.Payload.PhoneNumber,
+		request.Payload.NationalId,
+		request.Payload.Birthday,
+		request.Payload.Sex,
+		request.Payload.Address,
+		request.Payload.AddressOrigin,
+		request.Payload.UnitId,
+		request.Payload.Image,
+		request.Payload.ImageEkyc,
+		request.Permit.AccountID); err != nil {
+		return createStudentProfileResponse{
+			Code:    model.StatusServiceUnavailable,
+			Message: err.Error()}, err
+	}
 
 	return createStudentProfileResponse{}, nil
+}
+
+/* */
+func __studentDetails(ctx context.Context, request *studentDetailsRequest) (studentDetailsResponse, error) {
+	email, full_name, phone_number, national_id,
+		birthday, sex, address, address_origin, unit_id, image, image_ekyc, modified_by, created_by,
+		modified_at, created_at, ok, err := fsdb.StudentProfile.GetByStudentId(ctx, request.StudentId)
+	if err != nil {
+		return studentDetailsResponse{Code: model.StatusServiceUnavailable, Message: err.Error()}, err
+	}
+	if !ok {
+		return studentDetailsResponse{Code: model.StatusNotFound, Message: "NOT FOUND"}, errors.New("student_id does not exist")
+	}
+	return studentDetailsResponse{
+		Payload: student_details_data{
+			StudentId:     request.StudentId,
+			Email:         email,
+			FullName:      full_name,
+			PhoneNumber:   phone_number,
+			NationalId:    national_id,
+			Birthday:      birthday,
+			Sex:           sex,
+			Address:       address,
+			AddressOrigin: address_origin,
+			UnitId:        unit_id,
+			Image:         image,
+			ImageEkyc:     image_ekyc,
+			ModifiedBy:    modified_by,
+			ModifiedAt:    modified_at,
+			CreatedBy:     created_by,
+			CreatedAt:     created_at,
+		}}, nil
+}
+
+/* */
+func __uploadFaceImage(ctx context.Context, request *uploadFaceImageRequest) (uploadFaceImageResponse, error) {
+	// handle
+	return uploadFaceImageResponse{}, nil
 }

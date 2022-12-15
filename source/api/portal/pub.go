@@ -5,6 +5,7 @@ import (
 	"ekyc-app/package/wlog"
 	"ekyc-app/source/fsdb"
 	"errors"
+	"log"
 	"net/http"
 
 	"github.com/gin-gonic/gin"
@@ -18,9 +19,16 @@ func Reg(router *gin.Engine) {
 	router.POST("/login/auth/:reqId", loginBasic)
 	router.POST("/signup/auth/:reqId", signupBasic)
 
-	router.GET("portal/filterListUser/:reqId", filterListUser)
-	router.GET("portal/filterListStudent/:reqId", filterListStudent)
-	router.POST("portal/createStudentProfile/:reqId", createStudentProfile)
+	router.GET("/portal/user/list/:reqId", filterListUser)
+	router.GET("/portal/student/list/:reqId", filterListStudent)
+	//router.GET("/portal/user/detail/:reqId", filterListUser)
+	router.GET("/portal/student/detail/:studentId/:reqId", studentDetails)
+	router.POST("/portal/student/create/:reqId", createStudentProfile)
+
+	router.POST("/portal/file/upload/face-image/:reqId", uploadFaceImage)
+	// router.POST("/portal/file/upload/id-chip/:reqId", uploadIdChipImage)
+	// router.POST("/portal/file/upload/student-card/:reqId", uploadStudentCardImage)
+
 }
 
 func ping(c *gin.Context) {
@@ -206,11 +214,70 @@ func createStudentProfile(c *gin.Context) {
 		c.AbortWithError(http.StatusBadRequest, err)
 		return
 	}
-	resp, err := __createStudentProfile(c.Request.Context(), &request)
+	resp, err := __submitStudentProfile(c.Request.Context(), &request)
 	if err != nil {
 		wlog.Error(c, err)
 	}
 
+	// Trace client and result
+	resp.traceField = request.traceField
+	c.JSON(http.StatusOK, resp)
+}
+
+/* */
+func studentDetails(c *gin.Context) {
+	// validate token
+	status, _, from, err := validateBearer(
+		c.Request.Context(), c.Request)
+	if err != nil {
+		c.AbortWithError(status, err)
+		return
+	}
+	var (
+		request = studentDetailsRequest{
+			traceField: traceField{
+				RequestId: c.Param("reqId"),
+			},
+			Permit:    from,
+			StudentId: c.Param("studentId"),
+		}
+	)
+	resp, err := __studentDetails(
+		c.Request.Context(), &request)
+	if err != nil {
+		wlog.Error(c, err)
+	}
+	// Trace client and result
+	resp.traceField = request.traceField
+	c.JSON(http.StatusOK, resp)
+}
+
+/* */
+func uploadFaceImage(c *gin.Context) {
+	// validate token
+	status, _, from, err := validateBearer(
+		c.Request.Context(), c.Request)
+	if err != nil {
+		c.AbortWithError(status, err)
+		return
+	}
+	log.Println(from)
+	var (
+		request = uploadFaceImageRequest{
+			traceField: traceField{
+				RequestId: c.Param("reqId"),
+			},
+			Permit: from,
+		}
+	)
+	// validate image
+	// call API to Django
+	// upload to Google Bucket
+	resp, err := __uploadFaceImage(
+		c.Request.Context(), &request)
+	if err != nil {
+		wlog.Error(c, err)
+	}
 	// Trace client and result
 	resp.traceField = request.traceField
 	c.JSON(http.StatusOK, resp)
