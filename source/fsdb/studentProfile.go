@@ -275,8 +275,28 @@ func (ins *studentProfileFs) GetByStudentId(
 	if err != nil {
 		return "", "", "", "", time.Time{}, "", "", "", "", "", "", "", "", time.Time{}, time.Time{}, false, err
 	}
-
 	return info.Email, info.FullName, info.PhoneNumber, info.NationalId, info.Birthday, info.Sex, info.Address, info.AddressOrigin,
 		info.UnitId, info.Image, info.ImageEkyc, info.ModifiedBy, info.CreatedBy, info.ModifiedAt, info.CreatedAt, true, nil
+}
 
+func (ins *studentProfileFs) GetNationIdByStudentId(
+	ctx context.Context, student_id string) (
+	doc_id, full_name, national_id string, ok bool, err error) {
+	doc_id, info, _, err := ins.GetModelByStudentId(ctx, student_id)
+	if err == model.ErrDocNotFound {
+		return "", "", "", false, nil
+	}
+	if err != nil {
+		return "", "", "", false, err
+	}
+	return doc_id, info.FullName, info.NationalId, true, nil
+}
+
+func (ins *studentProfileFs) SetFaceImageURL(
+	ctx context.Context, docId, photoURL string) error {
+	var update = map[string]interface{}{
+		ins.fieldImage: photoURL,
+	}
+
+	return updateFields(ctx, docId, ins.coll, update)
 }

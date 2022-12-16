@@ -2,6 +2,7 @@ package portal
 
 import (
 	"context"
+	"ekyc-app/gcloud"
 	"ekyc-app/library/ascii"
 	"ekyc-app/package/socket"
 	"ekyc-app/package/token"
@@ -505,6 +506,33 @@ func __studentDetails(ctx context.Context, request *studentDetailsRequest) (stud
 
 /* */
 func __uploadFaceImage(ctx context.Context, request *uploadFaceImageRequest) (uploadFaceImageResponse, error) {
-	// handle
-	return uploadFaceImageResponse{}, nil
+	if err := request.Payload.validate(); err != nil {
+		return uploadFaceImageResponse{
+			Code:    model.StatusBadRequest,
+			Message: err.Error()}, err
+	}
+	doc_id, _, _, ok, err := fsdb.StudentProfile.GetNationIdByStudentId(ctx, request.Payload.StudentId)
+	if err != nil {
+		return uploadFaceImageResponse{Code: model.StatusServiceUnavailable, Message: err.Error()}, err
+	}
+	if !ok {
+		return uploadFaceImageResponse{Code: model.StatusNotFound, Message: "NOT_FOUND"}, errors.New("student_id does not exist")
+	}
+	// save image to DB
+	uri, err := gcloud.SaveFaceImageFile(ctx, request.Payload.StudentId, request.Payload.FileName, request.Payload.File)
+	if err != nil {
+		return uploadFaceImageResponse{Code: model.StatusServiceUnavailable, Message: err.Error()}, err
+	}
+	// update link photo to DB
+	var (
+		photoPath = fmt.Sprintf("/ekyc_image_bucket/%s", uri)
+	)
+	if err := fsdb.StudentProfile.SetFaceImageURL(ctx, doc_id, photoPath); err != nil {
+		return uploadFaceImageResponse{Code: model.StatusServiceUnavailable, Message: err.Error()}, err
+	}
+	return uploadFaceImageResponse{
+		Payload: face_image_resp{
+			Path: photoPath,
+		},
+	}, nil
 }

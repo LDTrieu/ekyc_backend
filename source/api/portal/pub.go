@@ -1,14 +1,17 @@
 package portal
 
 import (
+	"ekyc-app/library/net"
 	"ekyc-app/library/qrcode"
 	"ekyc-app/package/wlog"
 	"ekyc-app/source/fsdb"
+	"ekyc-app/source/wUtil"
 	"errors"
-	"log"
+	"fmt"
 	"net/http"
 
 	"github.com/gin-gonic/gin"
+	"go.mongodb.org/mongo-driver/bson/primitive"
 )
 
 func Reg(router *gin.Engine) {
@@ -25,7 +28,7 @@ func Reg(router *gin.Engine) {
 	router.GET("/portal/student/detail/:studentId/:reqId", studentDetails)
 	router.POST("/portal/student/create/:reqId", createStudentProfile)
 
-	router.POST("/portal/file/upload/face-image/:reqId", uploadFaceImage)
+	router.POST("/portal/file/upload/face-image/:studentId/:reqId", uploadFaceImage)
 	// router.POST("/portal/file/upload/id-chip/:reqId", uploadIdChipImage)
 	// router.POST("/portal/file/upload/student-card/:reqId", uploadStudentCardImage)
 
@@ -261,23 +264,50 @@ func uploadFaceImage(c *gin.Context) {
 		c.AbortWithError(status, err)
 		return
 	}
-	log.Println(from)
+
 	var (
 		request = uploadFaceImageRequest{
 			traceField: traceField{
 				RequestId: c.Param("reqId"),
 			},
 			Permit: from,
+			Payload: face_image_req{
+				StudentId: c.Param("studentId"),
+				FileName:  fmt.Sprintf("%s_%s.bin", c.Param("studentId"), primitive.NewObjectID().Hex()),
+			},
 		}
 	)
 	// validate image
-	// call API to Django
-	// upload to Google Bucket
-	resp, err := __uploadFaceImage(
-		c.Request.Context(), &request)
+	// Read multipart form files
+	multipart_form, err := net.NewMultipartForm(c)
+	if err != nil {
+		c.AbortWithError(http.StatusBadRequest, err)
+		return
+	}
+	filename, err := multipart_form.GetForm("filename")
 	if err != nil {
 		wlog.Error(c, err)
 	}
+	file_name, file, err := multipart_form.GetFile("filename")
+	if err != nil {
+		wlog.Error(c, err)
+	}
+	request.Payload.FileName = func() string {
+		if len(filename) > 0 {
+			return filename
+		}
+		return file_name
+	}()
+	request.Payload.File = file
+	// call API to Django
+
+	// upload to Google Bucket
+	resp, err := __uploadFaceImage(c.Request.Context(), &request)
+	if err != nil {
+		wlog.Error(c, err)
+	}
+
+	resp.Payload.URL = fmt.Sprintf("%s%s", wUtil.GetHost(c), resp.Payload.Path)
 	// Trace client and result
 	resp.traceField = request.traceField
 	c.JSON(http.StatusOK, resp)
