@@ -1,7 +1,6 @@
 package portal
 
 import (
-	"bytes"
 	"ekyc-app/library/net"
 	"ekyc-app/library/qrcode"
 	"ekyc-app/package/wlog"
@@ -9,8 +8,6 @@ import (
 	"ekyc-app/source/wUtil"
 	"errors"
 	"fmt"
-	"io"
-	"log"
 	"net/http"
 
 	"github.com/gin-gonic/gin"
@@ -287,33 +284,14 @@ func uploadFaceImage(c *gin.Context) {
 		c.AbortWithError(http.StatusBadRequest, err)
 		return
 	}
-	log.Println("LINE 288")
 	filename, err := multipart_form.GetForm("filename")
 	if err != nil {
 		wlog.Error(c, err)
 	}
-	log.Println("LINE 293:", filename, "ERR: ", err)
 	file_name, file, err := multipart_form.GetFile("filename")
 	if err != nil {
 		wlog.Error(c, err)
 	}
-	file2, err := c.FormFile("filename")
-	if err != nil {
-		wlog.Error(c, err)
-	}
-	file3, header, err := c.Request.FormFile("filename")
-	if err != nil {
-		wlog.Error(c, err)
-	}
-	log.Println("LINE 308: ", "   ", header)
-
-	buf := bytes.NewBuffer(nil)
-	if _, err := io.Copy(buf, file3); err != nil {
-		wlog.Error(c, err)
-	}
-
-	log.Println("len(file)", file2.Header, "file PNG: ", len(file), "len buf", len(buf.Bytes()))
-	log.Println("LINE 298: ", file_name)
 	request.Payload.FileName = func() string {
 		if len(filename) > 0 {
 			return filename
@@ -322,13 +300,13 @@ func uploadFaceImage(c *gin.Context) {
 	}()
 	request.Payload.File = file
 	// call API to Django
-	log.Println("LINE 307")
+
 	// upload to Google Bucket
 	resp, err := __uploadFaceImage(c.Request.Context(), &request)
 	if err != nil {
 		wlog.Error(c, err)
 	}
-	log.Println("LINE 313")
+
 	resp.Payload.URL = fmt.Sprintf("%s%s", wUtil.GetHost(c), resp.Payload.Path)
 	// Trace client and result
 	resp.traceField = request.traceField

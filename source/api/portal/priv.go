@@ -511,8 +511,6 @@ func __uploadFaceImage(ctx context.Context, request *uploadFaceImageRequest) (up
 			Code:    model.StatusBadRequest,
 			Message: err.Error()}, err
 	}
-
-	log.Println("LINE 514: ", len(request.Payload.File))
 	doc_id, _, _, ok, err := fsdb.StudentProfile.GetNationIdByStudentId(ctx, request.Payload.StudentId)
 	if err != nil {
 		return uploadFaceImageResponse{Code: model.StatusServiceUnavailable, Message: err.Error()}, err
@@ -520,22 +518,18 @@ func __uploadFaceImage(ctx context.Context, request *uploadFaceImageRequest) (up
 	if !ok {
 		return uploadFaceImageResponse{Code: model.StatusNotFound, Message: "NOT_FOUND"}, errors.New("student_id does not exist")
 	}
-	log.Println("LINE 522: ", doc_id, "Student_id", request.Payload.StudentId)
 	// save image to DB
-	uri, err := gcloud.SaveFaceImage(ctx, request.Payload.StudentId, request.Payload.File)
+	uri, err := gcloud.SaveFaceImageFile(ctx, request.Payload.StudentId, request.Payload.FileName, request.Payload.File)
 	if err != nil {
 		return uploadFaceImageResponse{Code: model.StatusServiceUnavailable, Message: err.Error()}, err
 	}
-
 	// update link photo to DB
 	var (
-		photoPath = fmt.Sprintf("/student/download/%s", uri)
+		photoPath = fmt.Sprintf("/ekyc_image_bucket/%s", uri)
 	)
-	log.Println("LINE 533: ", uri)
 	if err := fsdb.StudentProfile.SetFaceImageURL(ctx, doc_id, photoPath); err != nil {
 		return uploadFaceImageResponse{Code: model.StatusServiceUnavailable, Message: err.Error()}, err
 	}
-	log.Println("LINE 537: ", photoPath)
 	return uploadFaceImageResponse{
 		Payload: face_image_resp{
 			Path: photoPath,

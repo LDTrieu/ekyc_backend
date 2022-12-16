@@ -11,7 +11,7 @@ type Info struct {
 	PrePrivKey string `firestore:"pre_priv_key"`
 	//FacepayPrePublic string `firestore:"facepay_account_service_public_key"`
 	LogBucket          string `firestore:"log_bucket"`
-	TerminalFileBucket string `firestore:"terminal_file_bucket"`
+	TerminalFileBucket string `firestore:"ekyc_file_bucket"`
 }
 
 var (

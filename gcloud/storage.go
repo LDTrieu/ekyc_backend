@@ -31,8 +31,7 @@ func SaveFaceImage(ctx context.Context, accId string, file []byte) (
 	if err != nil {
 		return
 	}
-	log.Println("info", info)
-	log.Println("uri", uri)
+
 	if err := saveFile(ctx, uri, info.TerminalFileBucket, file); err != nil {
 		log.Println("err", err)
 		return "", err
@@ -42,7 +41,7 @@ func SaveFaceImage(ctx context.Context, accId string, file []byte) (
 
 func SaveFaceImageFile(ctx context.Context, account_id, filename string, file []byte) (string, error) {
 	var (
-		uri = fmt.Sprintf("%s/logo_%s", account_id, filename)
+		uri = fmt.Sprintf("%s/validate_%s", account_id, filename)
 	)
 	info, err := cfg.Get(ctx)
 	if err != nil {
@@ -55,8 +54,6 @@ func SaveFaceImageFile(ctx context.Context, account_id, filename string, file []
 }
 func saveFile(ctx context.Context, uri, bucket string, file []byte) (
 	err error) {
-	log.Println(bucket)
-	log.Println(uri)
 	client, err := getStoreClient(ctx)
 	if err != nil {
 		err = wlog.Error(ctx, err)
@@ -68,7 +65,6 @@ func saveFile(ctx context.Context, uri, bucket string, file []byte) (
 		return
 	}
 	err = wc.Close()
-	log.Println("err savefile: ", err)
 	return
 }
 
