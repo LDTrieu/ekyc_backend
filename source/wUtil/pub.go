@@ -3,6 +3,8 @@ package wUtil
 import (
 	"context"
 	"fmt"
+
+	"github.com/gin-gonic/gin"
 )
 
 func Error(err error) error {
@@ -32,4 +34,25 @@ func SetClientIp(ctx context.Context, ip string) context.Context {
 
 func GetClientIp(ctx context.Context) string {
 	return ctxValByKey(ctx, keyClientIp)
+}
+
+func GetHost(c *gin.Context) string {
+	return getTLS(c) + c.Request.Host
+}
+
+func GetUrl(c *gin.Context) (string, error) {
+
+	tls := getTLS(c)
+	requestURI := c.Request.RequestURI
+	host := c.Request.Host
+	hostURL := tls + host + requestURI
+	return hostURL, nil
+}
+
+func getTLS(c *gin.Context) string {
+	if c.Request.TLS != nil {
+		return "https://"
+	} else {
+		return "http://"
+	}
 }

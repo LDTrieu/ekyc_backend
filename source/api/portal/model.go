@@ -4,8 +4,11 @@ import (
 	"ekyc-app/source/auth"
 	"ekyc-app/source/fsdb"
 	"errors"
+	"fmt"
 	"log"
 	"time"
+
+	"go.mongodb.org/mongo-driver/bson/primitive"
 )
 
 const (
@@ -291,7 +294,24 @@ type uploadFaceImageResponse struct {
 
 type face_image_req struct {
 	StudentId string `json:"studentId"`
+	FileName  string `json:"fileName"`
+	File      []byte `json:"file"`
 }
 
 type face_image_resp struct {
+	URL  string `json:"url"`
+	Path string `json:"photoPath"`
+}
+
+func (ins *face_image_req) validate() error {
+	if len(ins.StudentId) < 1 {
+		return errors.New("student_id invalids")
+	}
+	if len(ins.FileName) < 3 {
+		ins.FileName = fmt.Sprintf("%s_%s.bin", ins.StudentId, primitive.NewObjectID().Hex())
+	}
+	// if len(ins.File) < 128 {
+	// 	return errors.New("file is too small")
+	// }
+	return nil
 }
