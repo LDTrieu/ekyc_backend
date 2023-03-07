@@ -59,9 +59,13 @@ type loginBasicResponse struct {
 type login_basic_data struct {
 	AccountId   string    `json:"accountId"`
 	FullName    string    `json:"fullName"`
+	FirstName   string    `json:"firstName"`
+	LastName    string    `json:"lastName"`
 	Email       string    `json:"email"`
 	PhoneNumber string    `json:"phoneNumber"`
 	Birthday    time.Time `json:"birthday"`
+	Avt         string    `json:"avt"`
+	Banner      string    `json:"banner"`
 	Token       string    `json:"token"`
 }
 
@@ -167,18 +171,35 @@ type list_student_resp struct {
 }
 
 type student_data struct {
-	FullName  string `json:"fullName"`
-	Image     string `json:"image"`
-	StudentId string `json:"studentId"`
-	IsBlocked bool   `json:"isBlocked"`
+	//student_detail
+	FullName    string    `json:"fullName"`
+	Image       string    `json:"image"`
+	StudentId   string    `json:"studentId"`
+	PhoneNumber string    `json:"phoneNumber"`
+	UnitId      string    `json:"unitId" `
+	Birthday    time.Time `json:"birthday"`
+	Gender      string    `json:"gender"`
+
+	//student_ekyc
+
+	//student_censorship
+	IsBlocked bool `json:"isBlocked"`
 }
 
-func withStudentModel(um *fsdb.StudentProfileModel) student_data {
+func withStudentModel(sm *fsdb.StudentProfileModel) student_data {
 	return student_data{
-		FullName:  um.FullName,
-		StudentId: um.StudentId,
-		// Image     : ,
-		IsBlocked: um.IsBlocked,
+		//student_detail
+		FullName:    sm.FullName,
+		StudentId:   sm.StudentId,
+		Image:       "https://tuk-cdn.s3.amazonaws.com/assets/components/advance_tables/at_1.png",
+		PhoneNumber: sm.PhoneNumber,
+		Birthday:    sm.Birthday,
+		UnitId:      sm.UnitId,
+		Gender:      sm.Sex,
+		//student_ekyc
+
+		//student_censorship
+		IsBlocked: sm.IsBlocked,
 	}
 }
 
