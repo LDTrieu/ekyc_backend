@@ -415,10 +415,7 @@ func __filterListStudent(
 }
 
 /* */
-func __submitStudentProfile(
-	ctx context.Context,
-	request *createStudentProfileRequest) (
-	createStudentProfileResponse, error) {
+func __submitStudentProfile(ctx context.Context, request *createStudentProfileRequest) (createStudentProfileResponse, error) {
 	if err := request.Payload.validate(); err != nil {
 		return createStudentProfileResponse{
 			Code:    model.StatusBadRequest,
@@ -446,24 +443,25 @@ func __submitStudentProfile(
 	if phone_number_already_exist {
 		return createStudentProfileResponse{Code: model.StatusPhoneNumberDuplicated, Message: "PHONE_NUMBER_ALREADY_EXIST"}, errors.New("phone number is duplicated")
 	}
-	national_id_already_exist, err := fsdb.StudentProfile.ValidateNationalId(ctx, request.Payload.NationalId)
-	if err != nil {
-		return createStudentProfileResponse{Code: model.StatusServiceUnavailable, Message: err.Error()}, err
-	}
-	if national_id_already_exist {
-		return createStudentProfileResponse{Code: model.StatusNationalIdDuplicated, Message: "NATIONAL_ID_ALREADY_EXIST"}, errors.New("national_id is duplicated")
-	}
+	// national_id_already_exist, err := fsdb.StudentProfile.ValidateNationalId(ctx, request.Payload.NationalId)
+	// if err != nil {
+	// 	return createStudentProfileResponse{Code: model.StatusServiceUnavailable, Message: err.Error()}, err
+	// }
+	// if national_id_already_exist {
+	// 	return createStudentProfileResponse{Code: model.StatusNationalIdDuplicated, Message: "NATIONAL_ID_ALREADY_EXIST"}, errors.New("national_id is duplicated")
+	// }
 
 	if err := fsdb.StudentProfile.CreateStudentProfile(ctx,
 		request.Payload.StudentId,
 		request.Payload.Email,
-		request.Payload.FullName,
+		request.Payload.FirstName,
+		request.Payload.LastName,
 		request.Payload.PhoneNumber,
 		request.Payload.NationalId,
 		request.Payload.Birthday,
-		request.Payload.Sex,
+		request.Payload.Gender,
 		request.Payload.Address,
-		request.Payload.AddressOrigin,
+		request.Payload.Hometown,
 		request.Payload.UnitId,
 		request.Payload.Image,
 		request.Payload.ImageEkyc,

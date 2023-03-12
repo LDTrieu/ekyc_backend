@@ -248,7 +248,8 @@ func (ins *personProfileFs) GetAll(ctx context.Context) (
 	return list, nil
 }
 
-func (ins *personProfileFs) SetToken(ctx context.Context, docId string, session_id, token string) error {
+func (ins *personProfileFs) SetToken(ctx context.Context, docId string,
+	 session_id, token string) error {
 	var update = map[string]interface{}{
 		ins.fieldModifiedAt: time.Now(),
 		ins.fieldSessionId:  session_id,
@@ -283,7 +284,8 @@ func (ins *personProfileFs) ValidateEmail(ctx context.Context, email string) (al
 	return count > 0, nil
 }
 
-func (ins *personProfileFs) ValidatePhoneNumber(ctx context.Context, phone_number string) (already_exist bool, err error) {
+func (ins *personProfileFs) ValidatePhoneNumber(ctx context.Context, 
+	phone_number string) (already_exist bool, err error) {
 	var (
 		count int
 	)
