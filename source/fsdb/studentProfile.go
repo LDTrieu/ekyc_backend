@@ -3,6 +3,7 @@ package fsdb
 import (
 	"context"
 	"ekyc-app/source/model"
+	"fmt"
 	"time"
 
 	"cloud.google.com/go/firestore"
@@ -54,6 +55,8 @@ var StudentProfile = &studentProfileFs{
 type StudentProfileModel struct {
 	StudentId     string    `json:"studentId" firestore:"student_id"`
 	Email         string    `json:"email" firestore:"email"`
+	FirstName     string    `json:"firstName" firestore:"first_name"`
+	LastName      string    `json:"lastName" firestore:"last_name"`
 	FullName      string    `json:"fullName" firestore:"full_name"`
 	PhoneNumber   string    `json:"phoneNumber" firestore:"phone_number"`
 	UnitId        string    `json:"unitId" firestore:"unit_id"`
@@ -83,13 +86,15 @@ func (ins *studentProfileFs) AddStudentProfile(ctx context.Context,
 
 func (ins *studentProfileFs) CreateStudentProfile(
 	ctx context.Context, student_id, email,
-	full_name, phone_number, national_id string, birthday time.Time, sex, address, address_origin,
+	first_name, last_name, phone_number, national_id string, birthday time.Time, sex, address, address_origin,
 	unitId, image, image_ekyc, create_by string) error {
 
 	temp := StudentProfileModel{
 		StudentId:     student_id,
 		Email:         email,
-		FullName:      full_name,
+		FirstName:     first_name,
+		LastName:      last_name,
+		FullName:      fmt.Sprintf("%s%s%s", first_name, " ", last_name),
 		PhoneNumber:   phone_number,
 		NationalId:    national_id,
 		Birthday:      birthday,
@@ -101,6 +106,8 @@ func (ins *studentProfileFs) CreateStudentProfile(
 		ImageEkyc:     image_ekyc,
 		CreatedBy:     create_by,
 		CreatedAt:     time.Now(),
+		ModifiedBy:    create_by,
+		ModifiedAt:    time.Now(),
 	}
 	_, err := add(ctx, ins.coll, &temp)
 	if err != nil {

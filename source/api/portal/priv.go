@@ -292,10 +292,14 @@ func __loginBasic(ctx context.Context,
 	payload := login_basic_data{
 		AccountId:   accountId,
 		FullName:    fullName,
+		FirstName:   fullName,
+		LastName:    fullName,
 		Email:       request.Email,
 		PhoneNumber: phoneNumber,
 		Birthday:    birthday,
 		Token:       jwt_login.Token,
+		Avt:         "https://png.pngtree.com/png-clipart/20190924/original/pngtree-user-vector-avatar-png-image_4830521.jpg",
+		Banner:      "https://images-wixmp-ed30a86b8c4ca887773594c2.wixmp.com/f/cebd17f1-b283-45e5-8600-6ec3edc558fd/dee2aqv-222532a7-8676-4788-b8e3-08d4f5be55e2.png/v1/fill/w_1264,h_632,q_70,strp/profile_banner_by_darkfigure4_dee2aqv-pre.jpg?token=eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9.eyJzdWIiOiJ1cm46YXBwOjdlMGQxODg5ODIyNjQzNzNhNWYwZDQxNWVhMGQyNmUwIiwiaXNzIjoidXJuOmFwcDo3ZTBkMTg4OTgyMjY0MzczYTVmMGQ0MTVlYTBkMjZlMCIsIm9iaiI6W1t7ImhlaWdodCI6Ijw9NjQwIiwicGF0aCI6IlwvZlwvY2ViZDE3ZjEtYjI4My00NWU1LTg2MDAtNmVjM2VkYzU1OGZkXC9kZWUyYXF2LTIyMjUzMmE3LTg2NzYtNDc4OC1iOGUzLTA4ZDRmNWJlNTVlMi5wbmciLCJ3aWR0aCI6Ijw9MTI4MCJ9XV0sImF1ZCI6WyJ1cm46c2VydmljZTppbWFnZS5vcGVyYXRpb25zIl19.sdy7FtZ92V4tHXX-hTf0PupZmkD7CQoG-BkmOY0_mQg",
 	}
 
 	return loginBasicResponse{
@@ -411,10 +415,7 @@ func __filterListStudent(
 }
 
 /* */
-func __submitStudentProfile(
-	ctx context.Context,
-	request *createStudentProfileRequest) (
-	createStudentProfileResponse, error) {
+func __submitStudentProfile(ctx context.Context, request *createStudentProfileRequest) (createStudentProfileResponse, error) {
 	if err := request.Payload.validate(); err != nil {
 		return createStudentProfileResponse{
 			Code:    model.StatusBadRequest,
@@ -442,24 +443,25 @@ func __submitStudentProfile(
 	if phone_number_already_exist {
 		return createStudentProfileResponse{Code: model.StatusPhoneNumberDuplicated, Message: "PHONE_NUMBER_ALREADY_EXIST"}, errors.New("phone number is duplicated")
 	}
-	national_id_already_exist, err := fsdb.StudentProfile.ValidateNationalId(ctx, request.Payload.NationalId)
-	if err != nil {
-		return createStudentProfileResponse{Code: model.StatusServiceUnavailable, Message: err.Error()}, err
-	}
-	if national_id_already_exist {
-		return createStudentProfileResponse{Code: model.StatusNationalIdDuplicated, Message: "NATIONAL_ID_ALREADY_EXIST"}, errors.New("national_id is duplicated")
-	}
+	// national_id_already_exist, err := fsdb.StudentProfile.ValidateNationalId(ctx, request.Payload.NationalId)
+	// if err != nil {
+	// 	return createStudentProfileResponse{Code: model.StatusServiceUnavailable, Message: err.Error()}, err
+	// }
+	// if national_id_already_exist {
+	// 	return createStudentProfileResponse{Code: model.StatusNationalIdDuplicated, Message: "NATIONAL_ID_ALREADY_EXIST"}, errors.New("national_id is duplicated")
+	// }
 
 	if err := fsdb.StudentProfile.CreateStudentProfile(ctx,
 		request.Payload.StudentId,
 		request.Payload.Email,
-		request.Payload.FullName,
+		request.Payload.FirstName,
+		request.Payload.LastName,
 		request.Payload.PhoneNumber,
 		request.Payload.NationalId,
 		request.Payload.Birthday,
-		request.Payload.Sex,
+		request.Payload.Gender,
 		request.Payload.Address,
-		request.Payload.AddressOrigin,
+		request.Payload.Hometown,
 		request.Payload.UnitId,
 		request.Payload.Image,
 		request.Payload.ImageEkyc,
@@ -483,6 +485,7 @@ func __studentDetails(ctx context.Context, request *studentDetailsRequest) (stud
 	if !ok {
 		return studentDetailsResponse{Code: model.StatusNotFound, Message: "NOT FOUND"}, errors.New("student_id does not exist")
 	}
+
 	return studentDetailsResponse{
 		Payload: student_details_data{
 			StudentId:     request.StudentId,

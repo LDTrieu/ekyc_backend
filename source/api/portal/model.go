@@ -59,9 +59,13 @@ type loginBasicResponse struct {
 type login_basic_data struct {
 	AccountId   string    `json:"accountId"`
 	FullName    string    `json:"fullName"`
+	FirstName   string    `json:"firstName"`
+	LastName    string    `json:"lastName"`
 	Email       string    `json:"email"`
 	PhoneNumber string    `json:"phoneNumber"`
 	Birthday    time.Time `json:"birthday"`
+	Avt         string    `json:"avt"`
+	Banner      string    `json:"banner"`
 	Token       string    `json:"token"`
 }
 
@@ -108,7 +112,6 @@ func (ins *signupBasicRequest) validate() error {
 		return errors.New("field full name invalid")
 	}
 	return nil
-
 }
 
 /* */
@@ -167,18 +170,35 @@ type list_student_resp struct {
 }
 
 type student_data struct {
-	FullName  string `json:"fullName"`
-	Image     string `json:"image"`
-	StudentId string `json:"studentId"`
-	IsBlocked bool   `json:"isBlocked"`
+	//student_detail
+	FullName    string    `json:"fullName"`
+	Image       string    `json:"image"`
+	StudentId   string    `json:"studentId"`
+	PhoneNumber string    `json:"phoneNumber"`
+	UnitId      string    `json:"unitId" `
+	Birthday    time.Time `json:"birthday"`
+	Gender      string    `json:"gender"`
+
+	//student_ekyc
+
+	//student_censorship
+	IsBlocked bool `json:"isBlocked"`
 }
 
-func withStudentModel(um *fsdb.StudentProfileModel) student_data {
+func withStudentModel(sm *fsdb.StudentProfileModel) student_data {
 	return student_data{
-		FullName:  um.FullName,
-		StudentId: um.StudentId,
-		// Image     : ,
-		IsBlocked: um.IsBlocked,
+		//student_detail
+		FullName:    sm.FullName,
+		StudentId:   sm.StudentId,
+		Image:       "https://tuk-cdn.s3.amazonaws.com/assets/components/advance_tables/at_1.png",
+		PhoneNumber: sm.PhoneNumber,
+		Birthday:    sm.Birthday,
+		UnitId:      sm.UnitId,
+		Gender:      sm.Sex,
+		//student_ekyc
+
+		//student_censorship
+		IsBlocked: sm.IsBlocked,
 	}
 }
 
@@ -197,19 +217,21 @@ type createStudentProfileResponse struct {
 }
 
 type student_profile_data struct {
-	StudentId     string    `json:"studentId"`
-	Email         string    `json:"email"`
-	FullName      string    `json:"fullName"`
-	PhoneNumber   string    `json:"phoneNumber"`
-	UnitId        string    `json:"unitId"`
-	NationalId    string    `json:"nationalId"`
-	Birthday      time.Time `json:"birthday"`
-	Sex           string    `json:"sex"`
-	Address       string    `json:"address"`
-	AddressOrigin string    `json:"addressOrigin"`
-	Image         string    `json:"image" `
-	ImageEkyc     string    `json:"imageEkyc"`
-	IsBlocked     bool      `json:"isBlocked"`
+	StudentId   string    `json:"studentId"`
+	Email       string    `json:"email"`
+	FirstName   string    `json:"firstName"`
+	LastName    string    `json:"lastName"`
+	FullName    string    `json:"fullName"`
+	PhoneNumber string    `json:"phoneNumber"`
+	UnitId      string    `json:"unitId"`
+	Birthday    time.Time `json:"dateOfBirth"`
+	Gender      string    `json:"gender"`
+	Address     string    `json:"address"`
+	NationalId  string    `json:"nationalId"`
+	Hometown    string    `json:"hometown"`
+	Image       string    `json:"image" `
+	ImageEkyc   string    `json:"imageEkyc"`
+	IsBlocked   bool      `json:"isBlocked"`
 }
 
 func (ins *student_profile_data) validate() error {
@@ -220,24 +242,27 @@ func (ins *student_profile_data) validate() error {
 	if len(ins.Email) < 1 {
 		return errors.New("field Email is invalid")
 	}
-	if len(ins.FullName) < 1 {
-		return errors.New("field full_name is invalid")
+	if len(ins.FirstName) < 1 {
+		return errors.New("field first_name is invalid")
+	}
+	if len(ins.LastName) < 1 {
+		return errors.New("field last_name is invalid")
 	}
 	if len(ins.UnitId) < 1 {
 		return errors.New("field unit_id is invalid")
 	}
-	if len(ins.NationalId) < 1 {
-		return errors.New("field national_id is invalid")
-	}
+	// if len(ins.NationalId) < 1 {
+	// 	return errors.New("field national_id is invalid")
+	// }
 	if len(ins.Address) < 1 {
 		return errors.New("field address is invalid")
 	}
-	if len(ins.Image) < 1 {
-		return errors.New("field image is invalid")
-	}
-	if len(ins.ImageEkyc) < 1 {
-		return errors.New("field image_ekyc is invalid")
-	}
+	// if len(ins.Image) < 1 {
+	// 	return errors.New("field image is invalid")
+	// }
+	// if len(ins.ImageEkyc) < 1 {
+	// 	return errors.New("field image_ekyc is invalid")
+	// }
 
 	return nil
 }

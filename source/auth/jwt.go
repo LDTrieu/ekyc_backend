@@ -11,17 +11,17 @@ const (
 	dur_time = 24 * time.Hour
 )
 
-func GenerateJWTLoginSession(ctx context.Context, session_id, account_id string) (
+func GenerateJWTLoginSession(ctx context.Context,
+	session_id, account_id string) (
 	id string, token_accesss *token.JWTDetails, err error) {
 	jwtKey, err := loadPrePrivKey(ctx)
 	if err != nil {
 		return "", nil, err
 	}
-	return token.GenerateJWT(jwtKey, 24*time.Hour,
-		&DataJWT{
-			SessionID: session_id,
-			AccountID: account_id,
-		})
+	return token.GenerateJWT(jwtKey, dur_time, &DataJWT{
+		SessionID: session_id,
+		AccountID: account_id,
+	})
 }
 
 func ValidateLoginJWT(ctx context.Context, jwt_token string) (
