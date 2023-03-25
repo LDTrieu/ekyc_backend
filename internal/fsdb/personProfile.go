@@ -2,7 +2,7 @@ package fsdb
 
 import (
 	"context"
-	"ekyc-app/source/model"
+	"ekyc-app/internal/model"
 	"errors"
 	"time"
 
@@ -249,7 +249,7 @@ func (ins *personProfileFs) GetAll(ctx context.Context) (
 }
 
 func (ins *personProfileFs) SetToken(ctx context.Context, docId string,
-	 session_id, token string) error {
+	session_id, token string) error {
 	var update = map[string]interface{}{
 		ins.fieldModifiedAt: time.Now(),
 		ins.fieldSessionId:  session_id,
@@ -284,7 +284,7 @@ func (ins *personProfileFs) ValidateEmail(ctx context.Context, email string) (al
 	return count > 0, nil
 }
 
-func (ins *personProfileFs) ValidatePhoneNumber(ctx context.Context, 
+func (ins *personProfileFs) ValidatePhoneNumber(ctx context.Context,
 	phone_number string) (already_exist bool, err error) {
 	var (
 		count int

@@ -2,6 +2,7 @@ package fsdb
 
 import (
 	"context"
+	"ekyc-app/internal/model"
 	"errors"
 	"time"
 
@@ -40,6 +41,7 @@ type DeviceProfileModel struct {
 	Token          string    `json:"token" firestore:"token"`
 	HashedPassword string    `json:"hashedPassword" firestore:"hashed_password"`
 	CreatedBy      string    `json:"createdBy" firestore:"created_by"`
+	ModifiedBy     string    `json:"modifiedBy" firestore:"modified_by"`
 	IsBlocked      bool      `json:"isBlocked" firestore:"is_blocked"`
 	LastLoginAt    time.Time `json:"lastLoginDate" firestore:"last_login_at"`
 	ModifiedAt     time.Time `json:"modifiedDate" firestore:"modified_at"`
@@ -79,6 +81,23 @@ func (ins *deviceProfileFs) CheckLogin(ctx context.Context, terminal_id, passwor
 	}
 	return doc_id, false, nil
 }
+
+func (ins *deviceProfileFs) GetTerminalIdByToken(
+	ctx context.Context, token string) (id, terminal_id string, ok bool, err error) {
+	var (
+		temp DeviceProfileModel
+	)
+	id, err = getOneEqual(ctx, &temp,
+		ins.coll, ins.fieldToken, token)
+	if err == model.ErrDocNotFound {
+		return "", "", false, nil
+	}
+	if err != nil {
+		return "", "", false, err
+	}
+	return id, temp.TerminalId, true, nil
+}
+
 func (ins *deviceProfileFs) SetToken(ctx context.Context, docId, token string, linked_at time.Time) error {
 	var update = map[string]interface{}{
 		ins.fieldLastLoginAt: linked_at,
@@ -113,4 +132,32 @@ func (ins *deviceProfileFs) ValidateTerminalId(ctx context.Context,
 		return false, err
 	}
 	return count > 0, nil
+}
+
+func (ins *deviceProfileFs) GetAll(ctx context.Context) (
+	[]*DeviceProfileModel, error) {
+	var (
+		list = make([]*DeviceProfileModel, 0)
+	)
+	if err := run(ctx, ins.coll, func(collectionRef *firestore.CollectionRef) error {
+		dIter := collectionRef.Documents(ctx)
+		for {
+			doc, err := dIter.Next()
+			if err == iterator.Done {
+				break
+			}
+			if err != nil {
+				return err
+			}
+			var temp DeviceProfileModel
+			if err := doc.DataTo(&temp); err != nil {
+				return err
+			}
+			list = append(list, &temp)
+		}
+		return nil
+	}); err != nil {
+		return nil, err
+	}
+	return list, nil
 }

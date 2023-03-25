@@ -2,18 +2,21 @@ package mobile
 
 import (
 	"context"
+	"ekyc-app/internal/auth"
+	"ekyc-app/internal/fsdb"
+	"ekyc-app/internal/model"
+	"ekyc-app/internal/service/faceauth"
+	"ekyc-app/internal/ws"
 	"ekyc-app/library/ascii"
 	"ekyc-app/package/token"
-	"ekyc-app/source/auth"
-	"ekyc-app/source/fsdb"
-	"ekyc-app/source/model"
-	"ekyc-app/source/ws"
 	"errors"
 	"fmt"
+	"log"
 	"net/http"
 	"time"
 
 	"github.com/google/uuid"
+	"go.mongodb.org/mongo-driver/bson/primitive"
 	"golang.org/x/crypto/bcrypt"
 )
 
@@ -44,13 +47,14 @@ func validateBearer(ctx context.Context,
 			}
 
 			// get from cache DB
-			_, account_id, ok, err := fsdb.PersonProfile.GetAccountIdByToken(ctx, bearer_token)
+			_, terminal_id, ok, err := fsdb.DeviceProfile.GetTerminalIdByToken(ctx, bearer_token)
 			if err != nil {
 				return http.StatusForbidden, bearer_token, &auth.DataJWT{}, err
 			}
 			if !ok {
 				return http.StatusForbidden, bearer_token, &auth.DataJWT{}, errors.New("token no login")
 			}
+
 			jwt_data, status, err := auth.ValidateLoginJWT(ctx, bearer_token)
 			if err != nil {
 				println("ValidateLoginJWT:", err.Error())
@@ -64,8 +68,8 @@ func validateBearer(ctx context.Context,
 			case token.ACCESS_TOKEN_EXPIRED:
 				return http.StatusForbidden, bearer_token, jwt_data, errors.New("token is expired")
 			case token.SUCCEED:
-				if jwt_data.AccountID != account_id {
-					return http.StatusForbidden, bearer_token, jwt_data, errors.New("account_id has been changed")
+				if jwt_data.AccountID != terminal_id {
+					return http.StatusForbidden, bearer_token, jwt_data, errors.New("terminal_id has been changed")
 				}
 				// auth pass
 				return http.StatusOK, bearer_token, jwt_data, nil
@@ -271,4 +275,88 @@ func __sigupTerminal(ctx context.Context,
 	}
 
 	return signupTerminalResponse{}, nil
+}
+
+/* */
+// pingThirdPartyRequest
+func __pingThirdParty(ctx context.Context,
+	request *pingThirdPartyRequest) (
+	pingThirdPartyResponse, error) {
+	var (
+		mock_data = faceauth.MockModel{
+			Name: "name_service_1",
+			Code: 123,
+		}
+	)
+	go func() {
+		// Call to auth service
+		code_resp, data_resp, err := faceauth.RequestSession(ctx,
+			&mock_data)
+		if err != nil {
+			log.Println("err: ", err)
+			// return pingThirdPartyResponse{
+			// 	Code:    model.StatusServiceUnavailable,
+			// 	Message: err.Error()}, err
+		}
+		log.Println("code_resp: ", code_resp)
+		log.Println("data_resp: ", data_resp)
+		//log.Println("time.Now() ", time.Now())
+	}()
+	//log.Println("time.Now() ", time.Now())
+	return pingThirdPartyResponse{}, nil
+}
+
+/* */
+func __faceAuthSession(ctx context.Context, request *faceAuthSessionRequest) (faceAuthSessionResponse, error) {
+
+	// var (
+	// 	face_data = options.FormFile{
+	// 		Filename: request.Payload.FileName,
+	// 		File:     request.Payload.File,
+	// 	}
+	// )
+	//log.Println("time.Now() 1: ", time.Now())
+	// code_resp, data_resp, err := faceauth.FaceAuthSession(ctx, &face_data)
+	// if err != nil {
+	// 	log.Println("ERR: ", err)
+	// 	return faceAuthSessionResponse{
+	// 		Code:    model.StatusServiceUnavailable,
+	// 		Message: err.Error()}, err
+	// }
+	// log.Println("code_resp: ", code_resp)
+	// log.Println("data_resp: ", data_resp)
+	// log.Println("time.Now() 2: ", time.Now())
+	var (
+		student_id  = request.Payload.StudentId
+		session_id  = primitive.NewObjectID().Hex()
+		terminal_id = request.Payload.TerminalId
+		auth_at     = time.Now()
+	)
+
+	// get name, face_id, student_id
+	_, full_name, _, _, _, _, _, _, unit_id, _, _, _, _, _, _, _, err := fsdb.StudentProfile.GetByStudentId(ctx, student_id)
+	if err != nil {
+		return faceAuthSessionResponse{
+			Code:    model.StatusServiceUnavailable,
+			Message: err.Error()}, err
+	}
+
+	// log session to db
+	_, err = fsdb.AuthSession.Add(ctx, session_id, student_id, "face_id", terminal_id, full_name, unit_id, "image_url",
+		auth_at)
+	if err != nil {
+		return faceAuthSessionResponse{
+			Code:    model.StatusServiceUnavailable,
+			Message: err.Error()}, err
+	}
+
+	// return to terminal
+	return faceAuthSessionResponse{
+		Payload: face_image_resp{
+			Name:      full_name,
+			FaceId:    "data_resp.FaceId",
+			StudentId: request.Payload.StudentId,
+			AuthTime:  auth_at,
+		},
+	}, nil
 }

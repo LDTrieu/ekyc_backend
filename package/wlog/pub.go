@@ -2,7 +2,7 @@ package wlog
 
 import (
 	"context"
-	"ekyc-app/source/wUtil"
+	"ekyc-app/internal/wUtil"
 	"encoding/json"
 	"fmt"
 	"log"

@@ -3,8 +3,8 @@ package fsdb
 import (
 	"context"
 	"ekyc-app/gcloud"
+	"ekyc-app/internal/model"
 	"ekyc-app/package/wlog"
-	"ekyc-app/source/model"
 	"time"
 
 	"cloud.google.com/go/firestore"

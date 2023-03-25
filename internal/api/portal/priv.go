@@ -3,13 +3,13 @@ package portal
 import (
 	"context"
 	"ekyc-app/gcloud"
+	"ekyc-app/internal/auth"
+	"ekyc-app/internal/fsdb"
+	"ekyc-app/internal/model"
+	"ekyc-app/internal/ws"
 	"ekyc-app/library/ascii"
 	"ekyc-app/package/socket"
 	"ekyc-app/package/token"
-	"ekyc-app/source/auth"
-	"ekyc-app/source/fsdb"
-	"ekyc-app/source/model"
-	"ekyc-app/source/ws"
 	"errors"
 	"fmt"
 	"log"
@@ -422,27 +422,14 @@ func __submitStudentProfile(ctx context.Context, request *createStudentProfileRe
 			Message: err.Error()}, err
 	}
 	// validate fields
-	student_id_already_exist, err := fsdb.StudentProfile.ValidateStudentId(ctx, request.Payload.StudentId)
-	if err != nil {
-		return createStudentProfileResponse{Code: model.StatusServiceUnavailable, Message: err.Error()}, err
-	}
-	if student_id_already_exist {
-		return createStudentProfileResponse{Code: model.StatusStudentIdDuplicated, Message: "STUDENT_ID_ALREADY_EXIST"}, errors.New("student_id is duplicated")
-	}
-	email_already_exist, err := fsdb.StudentProfile.ValidateEmail(ctx, request.Payload.Email)
-	if err != nil {
-		return createStudentProfileResponse{Code: model.StatusServiceUnavailable, Message: err.Error()}, err
-	}
-	if email_already_exist {
-		return createStudentProfileResponse{Code: model.StatusEmailDuplicated, Message: "EMAIL_ALREADY_EXIST"}, errors.New("email is duplicated")
-	}
-	phone_number_already_exist, err := fsdb.StudentProfile.ValidatePhoneNumber(ctx, request.Payload.PhoneNumber)
-	if err != nil {
-		return createStudentProfileResponse{Code: model.StatusServiceUnavailable, Message: err.Error()}, err
-	}
-	if phone_number_already_exist {
-		return createStudentProfileResponse{Code: model.StatusPhoneNumberDuplicated, Message: "PHONE_NUMBER_ALREADY_EXIST"}, errors.New("phone number is duplicated")
-	}
+	// student_id_already_exist, err := fsdb.StudentProfile.ValidateStudentId(ctx, request.Payload.StudentId)
+	// if err != nil {
+	// 	return createStudentProfileResponse{Code: model.StatusServiceUnavailable, Message: err.Error()}, err
+	// }
+	// if student_id_already_exist {
+	// 	return createStudentProfileResponse{Code: model.StatusStudentIdDuplicated, Message: "STUDENT_ID_ALREADY_EXIST"}, errors.New("student_id is duplicated")
+	// }
+
 	// national_id_already_exist, err := fsdb.StudentProfile.ValidateNationalId(ctx, request.Payload.NationalId)
 	// if err != nil {
 	// 	return createStudentProfileResponse{Code: model.StatusServiceUnavailable, Message: err.Error()}, err
@@ -472,6 +459,45 @@ func __submitStudentProfile(ctx context.Context, request *createStudentProfileRe
 	}
 
 	return createStudentProfileResponse{}, nil
+}
+
+/* */
+func __updateStudentEkyc(ctx context.Context, request *updateStudentEkycRequest) (updateStudentEkycResponse, error) {
+	if err := request.Payload.validate(); err != nil {
+		return updateStudentEkycResponse{
+			Code:    model.StatusBadRequest,
+			Message: err.Error()}, err
+	}
+	// validate fields
+	student_id_already_exist, err := fsdb.StudentProfile.ValidateStudentId(ctx, request.Payload.StudentId)
+	if err != nil {
+		return updateStudentEkycResponse{Code: model.StatusServiceUnavailable, Message: err.Error()}, err
+	}
+	if !student_id_already_exist {
+		return updateStudentEkycResponse{Code: model.StatusDataNotFound, Message: "STUDENT_ID_NOT_EXIST"}, errors.New("student_id not exist")
+	}
+	// check CCCD - Face Id
+
+	if err := fsdb.StudentProfile.SetEkyc(ctx,
+		request.Payload.StudentId,
+		request.Payload.NationalId,
+		request.Payload.PersonId,
+		request.Payload.FullName,
+		request.Payload.Gender,
+		request.Payload.FaceImageURL,
+		request.Payload.NationalIdCardURL,
+		request.Payload.Address,
+		request.Payload.PlaceOfOrigin,
+		request.Payload.Nationality,
+		request.Permit.AccountID,
+		request.Payload.DateOfBirth,
+		request.Payload.DateOfExpiry); err != nil {
+		return updateStudentEkycResponse{
+			Code:    model.StatusServiceUnavailable,
+			Message: err.Error()}, err
+	}
+
+	return updateStudentEkycResponse{}, nil
 }
 
 /* */
@@ -508,6 +534,32 @@ func __studentDetails(ctx context.Context, request *studentDetailsRequest) (stud
 }
 
 /* */
+func __updateStudent(ctx context.Context, request *updateStudentRequest) (updateStudentResponse, error) {
+	// if err := request.Payload.validate(); err != nil {
+	// 	return updateStudentResponse{
+	// 		Code:    model.StatusBadRequest,
+	// 		Message: err.Error()}, err
+	// }
+	// validate fields
+	student_id_already_exist, err := fsdb.StudentProfile.ValidateStudentId(ctx, request.Payload.StudentId)
+	if err != nil {
+		return updateStudentResponse{Code: model.StatusServiceUnavailable, Message: err.Error()}, err
+	}
+	if !student_id_already_exist {
+		return updateStudentResponse{Code: model.StatusDataNotFound, Message: "STUDENT_ID_NOT_EXIST"}, errors.New("student_id not exist")
+	}
+	// check CCCD - Face Id
+
+	if err := fsdb.StudentProfile.SetIsBlocked(ctx, request.Payload.StudentId, request.Payload.IsBlocked); err != nil {
+		return updateStudentResponse{
+			Code:    model.StatusServiceUnavailable,
+			Message: err.Error()}, err
+	}
+
+	return updateStudentResponse{}, nil
+}
+
+/* */
 func __uploadFaceImage(ctx context.Context, request *uploadFaceImageRequest) (uploadFaceImageResponse, error) {
 	if err := request.Payload.validate(); err != nil {
 		return uploadFaceImageResponse{
@@ -536,6 +588,97 @@ func __uploadFaceImage(ctx context.Context, request *uploadFaceImageRequest) (up
 	return uploadFaceImageResponse{
 		Payload: face_image_resp{
 			Path: photoPath,
+		},
+	}, nil
+}
+
+/* */
+func __uploadNationalIdImage(ctx context.Context, request *uploadNationalIdImageRequest) (uploadNationalIdImageResponse, error) {
+	// if err := request.Payload.validate(); err != nil {
+	// 	return uploadNationalIdImageResponse{
+	// 		Code:    model.StatusBadRequest,
+	// 		Message: err.Error()}, err
+	// }
+
+	return uploadNationalIdImageResponse{
+		Payload: national_id_image_resp{
+			FullName:          "Le Dinh Trieu",
+			NationalId:        "123456789",
+			DateOfBirth:       time.Now(),
+			DateOfExpiry:      time.Now(),
+			Gender:            "Nam",
+			Address:           "TP HCM",
+			PlaceOfOrigin:     "TP HCM",
+			Nationality:       "Viet Nam",
+			NationalIdCardURL: "https://www.consilium.europa.eu/prado/images/EST-JO-06001/334716.jpg",
+		},
+	}, nil
+}
+
+/* */
+func __uploadFaceRegImage(ctx context.Context, request *uploadFaceRegImageRequest) (uploadFaceRegImageResponse, error) {
+	// if err := request.Payload.validate(); err != nil {
+	// 	return uploadNationalIdImageResponse{
+	// 		Code:    model.StatusBadRequest,
+	// 		Message: err.Error()}, err
+	// }
+
+	return uploadFaceRegImageResponse{
+		Payload: face_reg_image_resp{
+			FaceImageURL: "https://png.pngtree.com/png-clipart/20190924/original/pngtree-user-vector-avatar-png-image_4830521.jpg",
+			PersonId:     "ab123456",
+			StudentId:    "123",
+			FullName:     "Le Dinh Trieu",
+		},
+	}, nil
+}
+
+/* */
+func __filterListSession(ctx context.Context,
+	request *filterListSessionRequest) (
+	filterListSessionResponse, error) {
+	db_sessions, err := fsdb.AuthSession.GetAll(ctx)
+	if err != nil {
+		return filterListSessionResponse{
+			Code:    model.StatusServiceUnavailable,
+			Message: err.Error()}, err
+	}
+
+	var (
+		list_session = make([]session_data, 0)
+	)
+	for _, session := range db_sessions {
+		list_session = append(list_session, withAuthSessionModel(session))
+	}
+	return filterListSessionResponse{
+		Payload: list_session_resp{
+			TotalSession: len(list_session),
+			ListSession:  list_session,
+		},
+	}, nil
+}
+
+/* */
+func __filterListDevice(ctx context.Context,
+	request *filterListDeviceRequest) (
+	filterListDeviceResponse, error) {
+	db_devices, err := fsdb.DeviceProfile.GetAll(ctx)
+	if err != nil {
+		return filterListDeviceResponse{
+			Code:    model.StatusServiceUnavailable,
+			Message: err.Error()}, err
+	}
+
+	var (
+		list_device = make([]device_data, 0)
+	)
+	for _, device := range db_devices {
+		list_device = append(list_device, withDeviceModel(device))
+	}
+	return filterListDeviceResponse{
+		Payload: list_device_resp{
+			TotalDevice: len(list_device),
+			ListDevice:  list_device,
 		},
 	}, nil
 }

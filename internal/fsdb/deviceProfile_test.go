@@ -20,3 +20,13 @@ func Test_Create(t *testing.T) {
 	}
 	log.Println("OKE: ", id)
 }
+
+func Test_GetAllDevice(t *testing.T) {
+	ctx := context.Background()
+
+	list, err := DeviceProfile.GetAll(ctx)
+	if err != nil {
+		t.Fatal("ERR: ", err)
+	}
+	log.Fatal("OKE: ", len(list))
+}

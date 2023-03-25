@@ -1,11 +1,10 @@
 package portal
 
 import (
-	"ekyc-app/source/auth"
-	"ekyc-app/source/fsdb"
+	"ekyc-app/internal/auth"
+	"ekyc-app/internal/fsdb"
 	"errors"
 	"fmt"
-	"log"
 	"time"
 
 	"go.mongodb.org/mongo-driver/bson/primitive"
@@ -236,7 +235,6 @@ type student_profile_data struct {
 
 func (ins *student_profile_data) validate() error {
 	if len(ins.StudentId) < 1 {
-		log.Println("ins.StudentId", ins.StudentId)
 		return errors.New("field student_id is invalid")
 	}
 	if len(ins.Email) < 1 {
@@ -339,4 +337,230 @@ func (ins *face_image_req) validate() error {
 	// 	return errors.New("file is too small")
 	// }
 	return nil
+}
+
+/* */
+type uploadNationalIdImageRequest struct {
+	traceField
+	Permit  *auth.DataJWT
+	Payload national_id_image_req `json:"payload"`
+}
+
+type uploadNationalIdImageResponse struct {
+	traceField
+	Code    int                    `json:"code"`
+	Message string                 `json:"message"`
+	Payload national_id_image_resp `json:"payload"`
+}
+type national_id_image_req struct {
+	StudentId string `json:"studentId"`
+	FileName  string `json:"fileName"`
+	File      []byte `json:"file"`
+}
+
+type national_id_image_resp struct {
+	FullName      string    `json:"fullName"`
+	NationalId    string    `json:"nationalId"`
+	DateOfBirth   time.Time `json:"dateOfBirth"`
+	DateOfExpiry  time.Time `json:"dateOfExpiry"`
+	Gender        string    `json:"gender"`
+	Address       string    `json:"address"`
+	PlaceOfOrigin string    `json:"placeOfOrigin"`
+	Nationality   string    `json:"nationality"`
+	//FaceImage string `json:"faceImage"`
+	NationalIdCardURL string `json:"nationalIdCardURL"`
+	// Path string `json:"photoPath"`
+}
+
+/* */
+type uploadFaceRegImageRequest struct {
+	traceField
+	Permit  *auth.DataJWT
+	Payload face_reg_image_req `json:"payload"`
+}
+
+type uploadFaceRegImageResponse struct {
+	traceField
+	Code    int                 `json:"code"`
+	Message string              `json:"message"`
+	Payload face_reg_image_resp `json:"payload"`
+}
+type face_reg_image_req struct {
+	StudentId string `json:"studentId"`
+	FileName  string `json:"fileName"`
+	File      []byte `json:"file"`
+}
+
+type face_reg_image_resp struct {
+	PersonId     string `json:"personId"`
+	StudentId    string `json:"studentId"`
+	FullName     string `json:"fullName"`
+	FaceImageURL string `json:"faceImageURL"`
+
+	//FaceImage string `json:"faceImage"`
+}
+
+/* */
+type updateStudentEkycRequest struct {
+	traceField
+	Permit  *auth.DataJWT
+	Payload update_ekyc_data `json:"payload"`
+}
+type updateStudentEkycResponse struct {
+	traceField
+	Code    int    `json:"code"`
+	Message string `json:"message"`
+}
+
+type update_ekyc_data struct {
+	StudentId         string    `json:"studentId"`
+	PersonId          string    `json:"personId"`
+	NationalId        string    `json:"nationalId"`
+	FullName          string    `json:"fullName"`
+	Gender            string    `json:"gender"`
+	Address           string    `json:"address"`
+	PlaceOfOrigin     string    `json:"placeOfOrigin"`
+	Nationality       string    `json:"nationality"`
+	DateOfBirth       time.Time `json:"dateOfBirth"`
+	DateOfExpiry      time.Time `json:"dateOfExpiry"`
+	NationalIdCardURL string    `json:"nationalIdCardURL"`
+	FaceImageURL      string    `json:"faceImageURL"`
+}
+type update_ekyc_resp struct {
+}
+
+func (ins *update_ekyc_data) validate() error {
+	if len(ins.StudentId) < 1 {
+		return errors.New("field student_id is invalid")
+	}
+
+	if len(ins.NationalId) < 1 {
+		return errors.New("field national_id is invalid")
+	}
+	if len(ins.FullName) < 1 {
+		return errors.New("field full_name is invalid")
+	}
+	if len(ins.Gender) < 1 {
+		return errors.New("field gender is invalid")
+	}
+	if len(ins.Address) < 1 {
+		return errors.New("field address is invalid")
+	}
+	if len(ins.PlaceOfOrigin) < 1 {
+		return errors.New("field place_of_origin is invalid")
+	}
+	if len(ins.NationalIdCardURL) < 1 {
+		return errors.New("field national_id_card_url is invalid")
+	}
+	if len(ins.FaceImageURL) < 1 {
+		return errors.New("field face_image_url is invalid")
+	}
+
+	return nil
+}
+
+/* */
+//updateStudentRequest
+type updateStudentRequest struct {
+	traceField
+	Permit  *auth.DataJWT
+	Payload update_student_data `json:"payload"`
+}
+type updateStudentResponse struct {
+	traceField
+	Code    int    `json:"code"`
+	Message string `json:"message"`
+}
+
+type update_student_data struct {
+	StudentId string `json:"studentId"`
+	IsBlocked bool   `json:"isBlocked"`
+}
+
+/* */
+type filterListSessionRequest struct {
+	traceField
+	Permit *auth.DataJWT
+	//Payload list_session_req `json:"payload"`
+}
+
+type filterListSessionResponse struct {
+	traceField
+	Code    int               `json:"code"`
+	Message string            `json:"message"`
+	Payload list_session_resp `json:"payload"`
+}
+type list_session_req struct {
+	// Stash        int            `json:"stash"`
+	// TotalSession int            `json:"totalSession"`
+	// ListSession  []session_data `json:"listSession"`
+}
+
+type list_session_resp struct {
+	Stash        int            `json:"stash"`
+	TotalSession int            `json:"totalSession"`
+	ListSession  []session_data `json:"listSession"`
+}
+
+type session_data struct {
+	SessionId  string    `json:"sessionId"`
+	StudentId  string    `json:"studentId"`
+	FullName   string    `json:"fullName"`
+	FaceId     string    `json:"faceId"`
+	TerminalId string    `json:"terminalId"`
+	UnitId     string    `json:"unitId"`
+	ImageUrl   string    `json:"imageUrl"`
+	AuthAt     time.Time `json:"authAt"`
+}
+
+func withAuthSessionModel(sm *fsdb.AuthSessionModel) session_data {
+	return session_data{
+		SessionId:  sm.SessionId,
+		StudentId:  sm.StudentId,
+		FullName:   sm.FullName,
+		FaceId:     sm.FaceId,
+		TerminalId: sm.TerminalId,
+		UnitId:     sm.UnitId,
+		ImageUrl:   "https://tuk-cdn.s3.amazonaws.com/assets/components/advance_tables/at_1.png",
+		AuthAt:     sm.AuthAt,
+	}
+}
+
+/* */
+type filterListDeviceRequest struct {
+	traceField
+	Permit *auth.DataJWT
+	//Payload list_session_req `json:"payload"`
+}
+
+type filterListDeviceResponse struct {
+	traceField
+	Code    int              `json:"code"`
+	Message string           `json:"message"`
+	Payload list_device_resp `json:"payload"`
+}
+
+type list_device_resp struct {
+	Stash       int           `json:"stash"`
+	TotalDevice int           `json:"totalDevice"`
+	ListDevice  []device_data `json:"listDevice"`
+}
+type device_data struct {
+	TerminalId  string    `json:"terminalId"`
+	Avatar      string    `json:"avt"`
+	IsBlocked   bool      `json:"isBlocked"`
+	ModifiedBy  string    `json:"modifiedBy"`
+	LastLoginAt time.Time `json:"lastLoginDate"`
+	ModifiedAt  time.Time `json:"modifiedDate"`
+}
+
+func withDeviceModel(dm *fsdb.DeviceProfileModel) device_data {
+	return device_data{
+		TerminalId:  dm.TerminalId,
+		Avatar:      dm.Avatar,
+		IsBlocked:   dm.IsBlocked,
+		LastLoginAt: dm.LastLoginAt,
+		ModifiedBy:  dm.ModifiedBy,
+		ModifiedAt:  dm.ModifiedAt,
+	}
 }

@@ -2,7 +2,7 @@ package fsdb
 
 import (
 	"context"
-	"ekyc-app/source/model"
+	"ekyc-app/internal/model"
 	"time"
 )
 
