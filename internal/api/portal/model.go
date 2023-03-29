@@ -62,6 +62,7 @@ type login_basic_data struct {
 	LastName    string    `json:"lastName"`
 	Email       string    `json:"email"`
 	PhoneNumber string    `json:"phoneNumber"`
+	UnitId      string    `json:"unitId"`
 	Birthday    time.Time `json:"birthday"`
 	Avt         string    `json:"avt"`
 	Banner      string    `json:"banner"`
@@ -83,8 +84,12 @@ func (ins *Credentials) validate() error {
 type signupBasicRequest struct {
 	traceField
 	Credentials
-	FullName    string `json:"fullName"`
-	PhoneNumber string `json:"phoneNumber"`
+	Permit      *auth.DataJWT
+	FullName    string    `json:"fullName"`
+	UnitId      string    `json:"unitId"`
+	PhoneNumber string    `json:"phoneNumber"`
+	DateOfBirth time.Time `json:"dateOfBirth"`
+
 	// some fields
 }
 
@@ -105,10 +110,13 @@ func (ins *signupBasicRequest) validate() error {
 		return err
 	}
 	if len(ins.PhoneNumber) < 1 {
-		return errors.New("field phone number invalid")
+		return errors.New("phone_number invalid")
 	}
 	if len(ins.FullName) < 1 {
-		return errors.New("field full name invalid")
+		return errors.New("full_name invalid")
+	}
+	if len(ins.UnitId) < 1 {
+		return errors.New("unit_id invalid")
 	}
 	return nil
 }
@@ -134,18 +142,52 @@ type list_user_resp struct {
 
 type user_data struct {
 	FullName    string `json:"fullName"`
-	Image       string `json:"image"`
+	Email       string `json:"email"`
+	AccountId   string `json:"accountId"`
+	UnitId      string `json:"unitId"`
 	PhoneNumber string `json:"phoneNumber"`
 	IsBlocked   bool   `json:"isBlocked"`
+	CreatedBy   string `json:"createdBy"`
 }
 
 func withUserModel(um *fsdb.PersonProfileModel) user_data {
 	return user_data{
 		FullName:    um.FullName,
 		PhoneNumber: um.PhoneNumber,
-		// Image     : ,
-		IsBlocked: um.IsBlocked,
+		Email:       um.Email,
+		AccountId:   um.AccountId,
+		UnitId:      "um.UnitId",
+		IsBlocked:   um.IsBlocked,
+		CreatedBy:   "um.CreatedBy",
 	}
+}
+
+/* */
+type userDetailRequest struct {
+	traceField
+	Permit    *auth.DataJWT
+	AccountId string
+	// Payload   student_profile_data `json:"payload"`
+}
+
+type userDetailResponse struct {
+	traceField
+	Code    int              `json:"code"`
+	Message string           `json:"message"`
+	Payload user_detail_data `json:"payload"`
+}
+
+type user_detail_data struct {
+	AccountId   string `json:"accountId"`
+	FullName    string `json:"fullName"`
+	Email       string `json:"email"`
+	UnitId      string `json:"unitId"`
+	PhoneNumber string `json:"phoneNumber"`
+	IsBlocked   bool   `json:"isBlocked"`
+	// ModifiedBy  string    `json:"modifiedBy"`
+	LastLoginAt time.Time `json:"lastLoginAt"`
+	CreatedBy   string    `json:"createdBy"`
+	CreatedAt   time.Time `json:"createdAt"`
 }
 
 /* */
@@ -266,22 +308,21 @@ func (ins *student_profile_data) validate() error {
 }
 
 /* */
-
-type studentDetailsRequest struct {
+type studentDetailRequest struct {
 	traceField
 	Permit    *auth.DataJWT
 	StudentId string
 	// Payload   student_profile_data `json:"payload"`
 }
 
-type studentDetailsResponse struct {
+type studentDetailResponse struct {
 	traceField
-	Code    int                  `json:"code"`
-	Message string               `json:"message"`
-	Payload student_details_data `json:"payload"`
+	Code    int                 `json:"code"`
+	Message string              `json:"message"`
+	Payload student_detail_data `json:"payload"`
 }
 
-type student_details_data struct {
+type student_detail_data struct {
 	StudentId     string    `json:"studentId"`
 	Email         string    `json:"email"`
 	FullName      string    `json:"fullName"`
@@ -546,21 +587,23 @@ type list_device_resp struct {
 	ListDevice  []device_data `json:"listDevice"`
 }
 type device_data struct {
-	TerminalId  string    `json:"terminalId"`
-	Avatar      string    `json:"avt"`
-	IsBlocked   bool      `json:"isBlocked"`
-	ModifiedBy  string    `json:"modifiedBy"`
-	LastLoginAt time.Time `json:"lastLoginDate"`
-	ModifiedAt  time.Time `json:"modifiedDate"`
+	TerminalId   string    `json:"terminalId"`
+	TerminalName string    `json:"terminalName"`
+	Avatar       string    `json:"avt"`
+	IsBlocked    bool      `json:"isBlocked"`
+	ModifiedBy   string    `json:"modifiedBy"`
+	LastLoginAt  time.Time `json:"lastLoginDate"`
+	ModifiedAt   time.Time `json:"modifiedDate"`
 }
 
 func withDeviceModel(dm *fsdb.DeviceProfileModel) device_data {
 	return device_data{
-		TerminalId:  dm.TerminalId,
-		Avatar:      dm.Avatar,
-		IsBlocked:   dm.IsBlocked,
-		LastLoginAt: dm.LastLoginAt,
-		ModifiedBy:  dm.ModifiedBy,
-		ModifiedAt:  dm.ModifiedAt,
+		TerminalId:   dm.TerminalId,
+		TerminalName: dm.TerminalName,
+		Avatar:       dm.Avatar,
+		IsBlocked:    dm.IsBlocked,
+		LastLoginAt:  dm.LastLoginAt,
+		ModifiedBy:   dm.ModifiedBy,
+		ModifiedAt:   dm.ModifiedAt,
 	}
 }

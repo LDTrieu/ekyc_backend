@@ -25,15 +25,16 @@ func Reg(router *gin.Engine) {
 	router.GET("/login/qr/download/:qrId/:reqId", downloadQR)
 	router.GET("/login/qr/rend/:reqId", rendQRLogin)
 	router.POST("/login/auth/:reqId", loginBasic)
-	router.POST("/signup/auth/:reqId", signupBasic)
 
 	// User admin
 	router.GET("/portal/user/list/:reqId", filterListUser)
+	router.GET("/portal/user/detail/:reqId", userDetail)
+	router.POST("/portal/user/create/:reqId", signupBasic)
 
 	// Student
 	router.GET("/portal/student/list/:reqId", filterListStudent)
 	//router.GET("/portal/user/detail/:reqId", filterListUser)
-	router.GET("/portal/student/detail/:reqId", studentDetails)
+	router.GET("/portal/student/detail/:reqId", studentDetail)
 	router.POST("/portal/student/create/:reqId", createStudentProfile)
 	router.POST("/portal/student/update-ekyc/:reqId", updateStudentEkyc)
 	router.POST("/portal/student/update/:reqId", updateStudent)
@@ -45,6 +46,7 @@ func Reg(router *gin.Engine) {
 
 	// Device
 	router.GET("/portal/device/list/:reqId", filterListDevice)
+
 	// Upload file
 	router.POST("/portal/file/upload/face-image/:studentId/:reqId", uploadFaceImage)
 	router.POST("/portal/file/upload/national-id-card/:reqId", uploadNationalIdImage)
@@ -132,11 +134,18 @@ func loginBasic(c *gin.Context) {
 
 /* */
 func signupBasic(c *gin.Context) {
+	// validate token
+	status, _, auth_data, err := validateBearer(c.Request.Context(), c.Request)
+	if err != nil {
+		c.AbortWithError(status, err)
+		return
+	}
 	var (
 		request = signupBasicRequest{
 			traceField: traceField{
 				RequestId: c.Param("reqId"),
 			},
+			Permit: auth_data,
 		}
 	)
 	if err := c.BindJSON(&request); err != nil {
@@ -184,6 +193,34 @@ func filterListUser(c *gin.Context) {
 	resp.traceField = request.traceField
 	c.JSON(http.StatusOK, resp)
 
+}
+
+/* */
+func userDetail(c *gin.Context) {
+	// validate token
+	status, _, from, err := validateBearer(
+		c.Request.Context(), c.Request)
+	if err != nil {
+		c.AbortWithError(status, err)
+		return
+	}
+	var (
+		request = userDetailRequest{
+			traceField: traceField{
+				RequestId: c.Param("reqId"),
+			},
+			Permit:    from,
+			AccountId: c.Query("accountId"),
+		}
+	)
+	resp, err := __userDetail(
+		c.Request.Context(), &request)
+	if err != nil {
+		wlog.Error(c, err)
+	}
+	// Trace client and result
+	resp.traceField = request.traceField
+	c.JSON(http.StatusOK, resp)
 }
 
 /* */
@@ -280,7 +317,7 @@ func updateStudentEkyc(c *gin.Context) {
 }
 
 /* */
-func studentDetails(c *gin.Context) {
+func studentDetail(c *gin.Context) {
 	// validate token
 	status, _, from, err := validateBearer(
 		c.Request.Context(), c.Request)
@@ -289,7 +326,7 @@ func studentDetails(c *gin.Context) {
 		return
 	}
 	var (
-		request = studentDetailsRequest{
+		request = studentDetailRequest{
 			traceField: traceField{
 				RequestId: c.Param("reqId"),
 			},
@@ -297,7 +334,7 @@ func studentDetails(c *gin.Context) {
 			StudentId: c.Query("studentId"),
 		}
 	)
-	resp, err := __studentDetails(
+	resp, err := __studentDetail(
 		c.Request.Context(), &request)
 	if err != nil {
 		wlog.Error(c, err)

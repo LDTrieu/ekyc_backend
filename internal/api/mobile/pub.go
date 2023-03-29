@@ -19,7 +19,7 @@ func Reg(router *gin.Engine) {
 	router.POST("/mobile/auth/signup/:reqId", signupTerminal)
 
 	// Image
-	router.POST("/mobile/auth/face-auth-session/:studentId/:reqId", faceAuthSession)
+	router.POST("/mobile/auth/face-auth-session/:reqId", faceAuthSession)
 	router.GET("/mobile/auth/ping-third-party/:reqId", pingThirdParty)
 	// Push notify
 
@@ -148,8 +148,8 @@ func faceAuthSession(c *gin.Context) {
 			},
 			Payload: face_image_req{
 				TerminalId: auth_data.AccountID,
-				StudentId:  c.Param("studentId"),
-				FileName:   fmt.Sprintf("%s_%s.bin", c.Param("studentId"), primitive.NewObjectID().Hex()),
+				// StudentId:  "studentId",
+				FileName: fmt.Sprintf("%s_%s.bin", "StudentId", primitive.NewObjectID().Hex()),
 			},
 		}
 	)

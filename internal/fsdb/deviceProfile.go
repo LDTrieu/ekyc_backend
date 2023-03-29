@@ -14,6 +14,7 @@ import (
 type deviceProfileFs struct {
 	coll                string
 	fieldTerminalId     string
+	fieldTerminalName   string
 	fieldAvt            string
 	fieldHashedPassword string
 	fieldToken          string
@@ -26,6 +27,7 @@ type deviceProfileFs struct {
 var DeviceProfile = &deviceProfileFs{
 	coll:                "device_profile",
 	fieldTerminalId:     "terminal_id",
+	fieldTerminalName:   "terminal_name",
 	fieldAvt:            "avt",
 	fieldHashedPassword: "hashed_password",
 	fieldToken:          "token",
@@ -36,6 +38,7 @@ var DeviceProfile = &deviceProfileFs{
 }
 
 type DeviceProfileModel struct {
+	TerminalName   string    `json:"terminalName" firestore:"terminal_name"`
 	TerminalId     string    `json:"terminalId" firestore:"terminal_id"`
 	Avatar         string    `json:"avt" firestore:"avt"`
 	Token          string    `json:"token" firestore:"token"`
@@ -49,10 +52,11 @@ type DeviceProfileModel struct {
 }
 
 func (ins *deviceProfileFs) Add(
-	ctx context.Context, terminal_id, avt, hashed_password,
+	ctx context.Context, terminal_id, terminal_name, avt, hashed_password,
 	create_by string) (id string, err error) {
 	init := DeviceProfileModel{
 		TerminalId:     terminal_id,
+		TerminalName:   terminal_name,
 		Avatar:         avt,
 		HashedPassword: hashed_password,
 		IsBlocked:      false,

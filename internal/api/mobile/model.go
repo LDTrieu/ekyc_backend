@@ -87,9 +87,8 @@ type login_terminal_data struct {
 type signupTerminalRequest struct {
 	traceField
 	Credentials
-	Permit      *auth.DataJWT
-	Avt         string `json:"avt"`
-	Description string `json:"description"`
+	Permit       *auth.DataJWT
+	TerminalName string `json:"terminalName"`
 }
 
 type signupTerminalResponse struct {
@@ -121,15 +120,17 @@ type faceAuthSessionResponse struct {
 type face_image_req struct {
 	// mock_test
 	TerminalId string `json:"terminalId"`
-	StudentId  string `json:"studentId"`
-	FileName   string `json:"fileName"`
-	File       []byte `json:"file"`
+	// StudentId  string `json:"studentId"`
+	FileName string `json:"fileName"`
+	File     []byte `json:"file"`
 }
 type face_image_resp struct {
-	Name      string    `json:"name"`
+	FullName  string    `json:"fullName"`
 	FaceId    string    `json:"faceId"`
 	StudentId string    `json:"studentId"`
-	AuthTime  time.Time `json:"authTime"`
+	Avt       string    `json:"avt"`
+	UnitId    string    `json:"unitId"`
+	AuthAt    time.Time `json:"authAt"`
 }
 
 /* */

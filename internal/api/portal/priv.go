@@ -254,7 +254,7 @@ func __loginBasic(ctx context.Context,
 	// Select from DB
 	// check email exist, and check hashed password
 	// get info
-	docId, accountId, fullName, phoneNumber, birthday, isBlocked, err := fsdb.PersonProfile.CheckLogin(ctx, request.Email, request.Password)
+	docId, accountId, fullName, phoneNumber, birthday, unitId, isBlocked, err := fsdb.PersonProfile.CheckLogin(ctx, request.Email, request.Password)
 	if err != nil {
 		return loginBasicResponse{
 			Code:    model.StatusForbidden,
@@ -297,6 +297,7 @@ func __loginBasic(ctx context.Context,
 		Email:       request.Email,
 		PhoneNumber: phoneNumber,
 		Birthday:    birthday,
+		UnitId:      unitId,
 		Token:       jwt_login.Token,
 		Avt:         "https://png.pngtree.com/png-clipart/20190924/original/pngtree-user-vector-avatar-png-image_4830521.jpg",
 		Banner:      "https://images-wixmp-ed30a86b8c4ca887773594c2.wixmp.com/f/cebd17f1-b283-45e5-8600-6ec3edc558fd/dee2aqv-222532a7-8676-4788-b8e3-08d4f5be55e2.png/v1/fill/w_1264,h_632,q_70,strp/profile_banner_by_darkfigure4_dee2aqv-pre.jpg?token=eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9.eyJzdWIiOiJ1cm46YXBwOjdlMGQxODg5ODIyNjQzNzNhNWYwZDQxNWVhMGQyNmUwIiwiaXNzIjoidXJuOmFwcDo3ZTBkMTg4OTgyMjY0MzczYTVmMGQ0MTVlYTBkMjZlMCIsIm9iaiI6W1t7ImhlaWdodCI6Ijw9NjQwIiwicGF0aCI6IlwvZlwvY2ViZDE3ZjEtYjI4My00NWU1LTg2MDAtNmVjM2VkYzU1OGZkXC9kZWUyYXF2LTIyMjUzMmE3LTg2NzYtNDc4OC1iOGUzLTA4ZDRmNWJlNTVlMi5wbmciLCJ3aWR0aCI6Ijw9MTI4MCJ9XV0sImF1ZCI6WyJ1cm46c2VydmljZTppbWFnZS5vcGVyYXRpb25zIl19.sdy7FtZ92V4tHXX-hTf0PupZmkD7CQoG-BkmOY0_mQg",
@@ -316,6 +317,9 @@ func __signupBasic(ctx context.Context,
 			Code:    model.StatusBadRequest,
 			Message: err.Error()}, err
 	}
+
+	log.Println("request", request)
+
 	// check email exist
 	email_already_exist, err := fsdb.PersonProfile.ValidateEmail(ctx, request.Email)
 	if err != nil {
@@ -346,7 +350,8 @@ func __signupBasic(ctx context.Context,
 	// Insert to DB
 	accountId := primitive.NewObjectID().Hex()
 	sessionId := uuid.NewString()
-	info, _, err := fsdb.PersonProfile.CreateSignupProfile(ctx, accountId, sessionId, request.Email, request.PhoneNumber, request.FullName, string(hashedPassword))
+	info, _, err := fsdb.PersonProfile.CreateSignupProfile(ctx, accountId, sessionId,
+		request.Email, request.PhoneNumber, request.FullName, request.UnitId, string(hashedPassword), request.Permit.AccountID)
 	if err != nil {
 		return signupBasicResponse{
 			Code:    model.StatusInternalServerError,
@@ -386,6 +391,31 @@ func __filterListUser(
 		},
 	}, nil
 
+}
+
+/* */
+
+func __userDetail(ctx context.Context, request *userDetailRequest) (userDetailResponse, error) {
+	_, db_user, ok, err := fsdb.PersonProfile.GetByAccountId(ctx, request.AccountId)
+	if err != nil {
+		return userDetailResponse{Code: model.StatusServiceUnavailable, Message: err.Error()}, err
+	}
+	if !ok {
+		return userDetailResponse{Code: model.StatusNotFound, Message: "NOT FOUND"}, errors.New("student_id does not exist")
+	}
+
+	return userDetailResponse{
+		Payload: user_detail_data{
+			AccountId:   db_user.AccountId,
+			FullName:    db_user.FullName,
+			Email:       db_user.Email,
+			PhoneNumber: db_user.PhoneNumber,
+			UnitId:      db_user.UnitId,
+			IsBlocked:   db_user.IsBlocked,
+			LastLoginAt: db_user.LastLoginAt,
+			CreatedAt:   db_user.CreatedAt,
+			CreatedBy:   db_user.CreatedBy,
+		}}, nil
 }
 
 /* */
@@ -501,19 +531,19 @@ func __updateStudentEkyc(ctx context.Context, request *updateStudentEkycRequest)
 }
 
 /* */
-func __studentDetails(ctx context.Context, request *studentDetailsRequest) (studentDetailsResponse, error) {
+func __studentDetail(ctx context.Context, request *studentDetailRequest) (studentDetailResponse, error) {
 	email, full_name, phone_number, national_id,
 		birthday, sex, address, address_origin, unit_id, image, image_ekyc, modified_by, created_by,
 		modified_at, created_at, ok, err := fsdb.StudentProfile.GetByStudentId(ctx, request.StudentId)
 	if err != nil {
-		return studentDetailsResponse{Code: model.StatusServiceUnavailable, Message: err.Error()}, err
+		return studentDetailResponse{Code: model.StatusServiceUnavailable, Message: err.Error()}, err
 	}
 	if !ok {
-		return studentDetailsResponse{Code: model.StatusNotFound, Message: "NOT FOUND"}, errors.New("student_id does not exist")
+		return studentDetailResponse{Code: model.StatusNotFound, Message: "NOT FOUND"}, errors.New("student_id does not exist")
 	}
 
-	return studentDetailsResponse{
-		Payload: student_details_data{
+	return studentDetailResponse{
+		Payload: student_detail_data{
 			StudentId:     request.StudentId,
 			Email:         email,
 			FullName:      full_name,

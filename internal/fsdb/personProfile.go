@@ -12,50 +12,53 @@ import (
 )
 
 type personProfileFs struct {
-	coll           string
-	fieldAccountId string
-	fieldSessionId string
-	fieldToken     string
-	fieldFullName  string
-	// fieldStudentId string
+	coll                string
+	fieldAccountId      string
+	fieldSessionId      string
+	fieldToken          string
+	fieldFullName       string
+	fieldUnitId         string
 	fieldEmail          string
 	fieldPhoneNumber    string
 	fieldHashedPassword string
 	fieldBirthday       string
 	fieldIsBlocked      string
-	fieldModifiedAt     string
+	fieldLastLoginAt    string
 	fieldCreatedAt      string
+	fieldCreatedBy      string
 }
 
 var PersonProfile = &personProfileFs{
-	coll:           "person_profile",
-	fieldAccountId: "account_id",
-	fieldSessionId: "session_id",
-	fieldToken:     "token",
-	fieldFullName:  "full_name",
-	// fieldStudentId:      "student_id",
+	coll:                "person_profile",
+	fieldAccountId:      "account_id",
+	fieldSessionId:      "session_id",
+	fieldToken:          "token",
+	fieldFullName:       "full_name",
+	fieldUnitId:         "unit_id",
 	fieldEmail:          "email",
 	fieldPhoneNumber:    "phone_number",
 	fieldHashedPassword: "hashed_password",
 	fieldBirthday:       "birthday",
 	fieldIsBlocked:      "isBlocked",
-	fieldModifiedAt:     "modified_at",
+	fieldLastLoginAt:    "last_login_at",
 	fieldCreatedAt:      "created_at",
+	fieldCreatedBy:      "created_by",
 }
 
 type PersonProfileModel struct {
-	AccountId string `json:"accountId" firestore:"account_id"`
-	SessionId string `json:"sessionId" firestore:"session_id"`
-	Token     string `json:"token" firestore:"token"`
-	FullName  string `json:"fullname" firestore:"full_name"`
-	// StudentId      string    `json:"studentId" firestore:"student_id"`
+	AccountId      string    `json:"accountId" firestore:"account_id"`
+	SessionId      string    `json:"sessionId" firestore:"session_id"`
+	Token          string    `json:"token" firestore:"token"`
+	FullName       string    `json:"fullname" firestore:"full_name"`
+	UnitId         string    `json:"unitId" firestore:"uit_id"`
 	Email          string    `json:"email" firestore:"email"`
 	PhoneNumber    string    `json:"phoneNumber" firestore:"phone_number"`
 	HashedPassword string    `json:"hashedPassword" firestore:"hashed_password"`
 	Birthday       time.Time `json:"birthday" firestore:"birthday"`
 	IsBlocked      bool      `json:"isBlocked" firestore:"is_blocked"`
-	ModifiedAt     time.Time `json:"modifiedDate" firestore:"modified_at"`
+	LastLoginAt    time.Time `json:"lastLoginAt" firestore:"last_login_at"`
 	CreatedAt      time.Time `json:"createdDate" firestore:"created_at"`
+	CreatedBy      string    `json:"createdBy" firestore:"created_by"`
 }
 
 func (ins *personProfileFs) Add(ctx context.Context,
@@ -80,7 +83,7 @@ func (ins *personProfileFs) CreateSignupProfile(
 	ctx context.Context,
 	account_id, session_id,
 	email, phone_number,
-	full_name, hashed_password string) (
+	full_name, unit_id, hashed_password, created_by string) (
 	*PersonProfileModel, bool, error) {
 	// make new data and insert db
 	person_new := PersonProfileModel{
@@ -89,10 +92,12 @@ func (ins *personProfileFs) CreateSignupProfile(
 		Email:          email,
 		PhoneNumber:    phone_number,
 		FullName:       full_name,
+		UnitId:         unit_id,
 		HashedPassword: hashed_password,
 		IsBlocked:      false,
-		ModifiedAt:     time.Now(),
+		LastLoginAt:    time.Now(),
 		CreatedAt:      time.Now(),
+		CreatedBy:      created_by,
 	}
 	if err := ins.AddPersonProfile(ctx, &person_new); err != nil {
 		return nil, false, err
@@ -127,19 +132,19 @@ func (ins *personProfileFs) CreateIfNotExist(ctx context.Context, account_id, se
 }
 
 func (ins *personProfileFs) CheckLogin(ctx context.Context, email, password string) (
-	id, account_id, full_name, phone_number string, birthday time.Time, isBlocked bool, err error) {
+	id, account_id, full_name, phone_number string, birthday time.Time, unit_id string, isBlocked bool, err error) {
 	var (
 		temp PersonProfileModel
 	)
 	id, err = getOneEqual(ctx, &temp, ins.coll, ins.fieldEmail, email)
 	if err != nil {
-		return "", "", "", "", time.Time{}, false, errors.New("email or password invalid")
+		return "", "", "", "", time.Time{}, "", false, errors.New("email or password invalid")
 	}
 	if err := bcrypt.CompareHashAndPassword([]byte(temp.HashedPassword), []byte(password)); err != nil {
-		return "", "", "", "", time.Time{}, false, errors.New("email or password invalid")
+		return "", "", "", "", time.Time{}, "", false, errors.New("email or password invalid")
 	}
 
-	return id, temp.AccountId, temp.FullName, temp.PhoneNumber, temp.Birthday, temp.IsBlocked, nil
+	return id, temp.AccountId, temp.FullName, temp.PhoneNumber, temp.Birthday, temp.UnitId, temp.IsBlocked, nil
 }
 
 func (ins *personProfileFs) GetSessionID(ctx context.Context, token string) (
@@ -251,9 +256,9 @@ func (ins *personProfileFs) GetAll(ctx context.Context) (
 func (ins *personProfileFs) SetToken(ctx context.Context, docId string,
 	session_id, token string) error {
 	var update = map[string]interface{}{
-		ins.fieldModifiedAt: time.Now(),
-		ins.fieldSessionId:  session_id,
-		ins.fieldToken:      token,
+		ins.fieldLastLoginAt: time.Now(),
+		ins.fieldSessionId:   session_id,
+		ins.fieldToken:       token,
 	}
 	return updateFields(ctx, docId, ins.coll, update)
 }
