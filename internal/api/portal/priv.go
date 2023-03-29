@@ -3,13 +3,13 @@ package portal
 import (
 	"context"
 	"ekyc-app/gcloud"
+	"ekyc-app/internal/auth"
+	"ekyc-app/internal/fsdb"
+	"ekyc-app/internal/model"
+	"ekyc-app/internal/ws"
 	"ekyc-app/library/ascii"
 	"ekyc-app/package/socket"
 	"ekyc-app/package/token"
-	"ekyc-app/source/auth"
-	"ekyc-app/source/fsdb"
-	"ekyc-app/source/model"
-	"ekyc-app/source/ws"
 	"errors"
 	"fmt"
 	"log"
@@ -254,7 +254,7 @@ func __loginBasic(ctx context.Context,
 	// Select from DB
 	// check email exist, and check hashed password
 	// get info
-	docId, accountId, fullName, phoneNumber, birthday, isBlocked, err := fsdb.PersonProfile.CheckLogin(ctx, request.Email, request.Password)
+	docId, accountId, fullName, phoneNumber, birthday, unitId, isBlocked, err := fsdb.PersonProfile.CheckLogin(ctx, request.Email, request.Password)
 	if err != nil {
 		return loginBasicResponse{
 			Code:    model.StatusForbidden,
@@ -297,6 +297,7 @@ func __loginBasic(ctx context.Context,
 		Email:       request.Email,
 		PhoneNumber: phoneNumber,
 		Birthday:    birthday,
+		UnitId:      unitId,
 		Token:       jwt_login.Token,
 		Avt:         "https://png.pngtree.com/png-clipart/20190924/original/pngtree-user-vector-avatar-png-image_4830521.jpg",
 		Banner:      "https://images-wixmp-ed30a86b8c4ca887773594c2.wixmp.com/f/cebd17f1-b283-45e5-8600-6ec3edc558fd/dee2aqv-222532a7-8676-4788-b8e3-08d4f5be55e2.png/v1/fill/w_1264,h_632,q_70,strp/profile_banner_by_darkfigure4_dee2aqv-pre.jpg?token=eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9.eyJzdWIiOiJ1cm46YXBwOjdlMGQxODg5ODIyNjQzNzNhNWYwZDQxNWVhMGQyNmUwIiwiaXNzIjoidXJuOmFwcDo3ZTBkMTg4OTgyMjY0MzczYTVmMGQ0MTVlYTBkMjZlMCIsIm9iaiI6W1t7ImhlaWdodCI6Ijw9NjQwIiwicGF0aCI6IlwvZlwvY2ViZDE3ZjEtYjI4My00NWU1LTg2MDAtNmVjM2VkYzU1OGZkXC9kZWUyYXF2LTIyMjUzMmE3LTg2NzYtNDc4OC1iOGUzLTA4ZDRmNWJlNTVlMi5wbmciLCJ3aWR0aCI6Ijw9MTI4MCJ9XV0sImF1ZCI6WyJ1cm46c2VydmljZTppbWFnZS5vcGVyYXRpb25zIl19.sdy7FtZ92V4tHXX-hTf0PupZmkD7CQoG-BkmOY0_mQg",
@@ -316,6 +317,9 @@ func __signupBasic(ctx context.Context,
 			Code:    model.StatusBadRequest,
 			Message: err.Error()}, err
 	}
+
+	log.Println("request", request)
+
 	// check email exist
 	email_already_exist, err := fsdb.PersonProfile.ValidateEmail(ctx, request.Email)
 	if err != nil {
@@ -346,7 +350,8 @@ func __signupBasic(ctx context.Context,
 	// Insert to DB
 	accountId := primitive.NewObjectID().Hex()
 	sessionId := uuid.NewString()
-	info, _, err := fsdb.PersonProfile.CreateSignupProfile(ctx, accountId, sessionId, request.Email, request.PhoneNumber, request.FullName, string(hashedPassword))
+	info, _, err := fsdb.PersonProfile.CreateSignupProfile(ctx, accountId, sessionId,
+		request.Email, request.PhoneNumber, request.FullName, request.UnitId, string(hashedPassword), request.Permit.AccountID)
 	if err != nil {
 		return signupBasicResponse{
 			Code:    model.StatusInternalServerError,
@@ -389,6 +394,31 @@ func __filterListUser(
 }
 
 /* */
+
+func __userDetail(ctx context.Context, request *userDetailRequest) (userDetailResponse, error) {
+	_, db_user, ok, err := fsdb.PersonProfile.GetByAccountId(ctx, request.AccountId)
+	if err != nil {
+		return userDetailResponse{Code: model.StatusServiceUnavailable, Message: err.Error()}, err
+	}
+	if !ok {
+		return userDetailResponse{Code: model.StatusNotFound, Message: "NOT FOUND"}, errors.New("student_id does not exist")
+	}
+
+	return userDetailResponse{
+		Payload: user_detail_data{
+			AccountId:   db_user.AccountId,
+			FullName:    db_user.FullName,
+			Email:       db_user.Email,
+			PhoneNumber: db_user.PhoneNumber,
+			UnitId:      db_user.UnitId,
+			IsBlocked:   db_user.IsBlocked,
+			LastLoginAt: db_user.LastLoginAt,
+			CreatedAt:   db_user.CreatedAt,
+			CreatedBy:   db_user.CreatedBy,
+		}}, nil
+}
+
+/* */
 func __filterListStudent(
 	ctx context.Context,
 	request *filterListStudentRequest) (
@@ -422,27 +452,14 @@ func __submitStudentProfile(ctx context.Context, request *createStudentProfileRe
 			Message: err.Error()}, err
 	}
 	// validate fields
-	student_id_already_exist, err := fsdb.StudentProfile.ValidateStudentId(ctx, request.Payload.StudentId)
-	if err != nil {
-		return createStudentProfileResponse{Code: model.StatusServiceUnavailable, Message: err.Error()}, err
-	}
-	if student_id_already_exist {
-		return createStudentProfileResponse{Code: model.StatusStudentIdDuplicated, Message: "STUDENT_ID_ALREADY_EXIST"}, errors.New("student_id is duplicated")
-	}
-	email_already_exist, err := fsdb.StudentProfile.ValidateEmail(ctx, request.Payload.Email)
-	if err != nil {
-		return createStudentProfileResponse{Code: model.StatusServiceUnavailable, Message: err.Error()}, err
-	}
-	if email_already_exist {
-		return createStudentProfileResponse{Code: model.StatusEmailDuplicated, Message: "EMAIL_ALREADY_EXIST"}, errors.New("email is duplicated")
-	}
-	phone_number_already_exist, err := fsdb.StudentProfile.ValidatePhoneNumber(ctx, request.Payload.PhoneNumber)
-	if err != nil {
-		return createStudentProfileResponse{Code: model.StatusServiceUnavailable, Message: err.Error()}, err
-	}
-	if phone_number_already_exist {
-		return createStudentProfileResponse{Code: model.StatusPhoneNumberDuplicated, Message: "PHONE_NUMBER_ALREADY_EXIST"}, errors.New("phone number is duplicated")
-	}
+	// student_id_already_exist, err := fsdb.StudentProfile.ValidateStudentId(ctx, request.Payload.StudentId)
+	// if err != nil {
+	// 	return createStudentProfileResponse{Code: model.StatusServiceUnavailable, Message: err.Error()}, err
+	// }
+	// if student_id_already_exist {
+	// 	return createStudentProfileResponse{Code: model.StatusStudentIdDuplicated, Message: "STUDENT_ID_ALREADY_EXIST"}, errors.New("student_id is duplicated")
+	// }
+
 	// national_id_already_exist, err := fsdb.StudentProfile.ValidateNationalId(ctx, request.Payload.NationalId)
 	// if err != nil {
 	// 	return createStudentProfileResponse{Code: model.StatusServiceUnavailable, Message: err.Error()}, err
@@ -475,19 +492,58 @@ func __submitStudentProfile(ctx context.Context, request *createStudentProfileRe
 }
 
 /* */
-func __studentDetails(ctx context.Context, request *studentDetailsRequest) (studentDetailsResponse, error) {
+func __updateStudentEkyc(ctx context.Context, request *updateStudentEkycRequest) (updateStudentEkycResponse, error) {
+	if err := request.Payload.validate(); err != nil {
+		return updateStudentEkycResponse{
+			Code:    model.StatusBadRequest,
+			Message: err.Error()}, err
+	}
+	// validate fields
+	student_id_already_exist, err := fsdb.StudentProfile.ValidateStudentId(ctx, request.Payload.StudentId)
+	if err != nil {
+		return updateStudentEkycResponse{Code: model.StatusServiceUnavailable, Message: err.Error()}, err
+	}
+	if !student_id_already_exist {
+		return updateStudentEkycResponse{Code: model.StatusDataNotFound, Message: "STUDENT_ID_NOT_EXIST"}, errors.New("student_id not exist")
+	}
+	// check CCCD - Face Id
+
+	if err := fsdb.StudentProfile.SetEkyc(ctx,
+		request.Payload.StudentId,
+		request.Payload.NationalId,
+		request.Payload.PersonId,
+		request.Payload.FullName,
+		request.Payload.Gender,
+		request.Payload.FaceImageURL,
+		request.Payload.NationalIdCardURL,
+		request.Payload.Address,
+		request.Payload.PlaceOfOrigin,
+		request.Payload.Nationality,
+		request.Permit.AccountID,
+		request.Payload.DateOfBirth,
+		request.Payload.DateOfExpiry); err != nil {
+		return updateStudentEkycResponse{
+			Code:    model.StatusServiceUnavailable,
+			Message: err.Error()}, err
+	}
+
+	return updateStudentEkycResponse{}, nil
+}
+
+/* */
+func __studentDetail(ctx context.Context, request *studentDetailRequest) (studentDetailResponse, error) {
 	email, full_name, phone_number, national_id,
 		birthday, sex, address, address_origin, unit_id, image, image_ekyc, modified_by, created_by,
 		modified_at, created_at, ok, err := fsdb.StudentProfile.GetByStudentId(ctx, request.StudentId)
 	if err != nil {
-		return studentDetailsResponse{Code: model.StatusServiceUnavailable, Message: err.Error()}, err
+		return studentDetailResponse{Code: model.StatusServiceUnavailable, Message: err.Error()}, err
 	}
 	if !ok {
-		return studentDetailsResponse{Code: model.StatusNotFound, Message: "NOT FOUND"}, errors.New("student_id does not exist")
+		return studentDetailResponse{Code: model.StatusNotFound, Message: "NOT FOUND"}, errors.New("student_id does not exist")
 	}
 
-	return studentDetailsResponse{
-		Payload: student_details_data{
+	return studentDetailResponse{
+		Payload: student_detail_data{
 			StudentId:     request.StudentId,
 			Email:         email,
 			FullName:      full_name,
@@ -505,6 +561,32 @@ func __studentDetails(ctx context.Context, request *studentDetailsRequest) (stud
 			CreatedBy:     created_by,
 			CreatedAt:     created_at,
 		}}, nil
+}
+
+/* */
+func __updateStudent(ctx context.Context, request *updateStudentRequest) (updateStudentResponse, error) {
+	// if err := request.Payload.validate(); err != nil {
+	// 	return updateStudentResponse{
+	// 		Code:    model.StatusBadRequest,
+	// 		Message: err.Error()}, err
+	// }
+	// validate fields
+	student_id_already_exist, err := fsdb.StudentProfile.ValidateStudentId(ctx, request.Payload.StudentId)
+	if err != nil {
+		return updateStudentResponse{Code: model.StatusServiceUnavailable, Message: err.Error()}, err
+	}
+	if !student_id_already_exist {
+		return updateStudentResponse{Code: model.StatusDataNotFound, Message: "STUDENT_ID_NOT_EXIST"}, errors.New("student_id not exist")
+	}
+	// check CCCD - Face Id
+
+	if err := fsdb.StudentProfile.SetIsBlocked(ctx, request.Payload.StudentId, request.Payload.IsBlocked); err != nil {
+		return updateStudentResponse{
+			Code:    model.StatusServiceUnavailable,
+			Message: err.Error()}, err
+	}
+
+	return updateStudentResponse{}, nil
 }
 
 /* */
@@ -536,6 +618,97 @@ func __uploadFaceImage(ctx context.Context, request *uploadFaceImageRequest) (up
 	return uploadFaceImageResponse{
 		Payload: face_image_resp{
 			Path: photoPath,
+		},
+	}, nil
+}
+
+/* */
+func __uploadNationalIdImage(ctx context.Context, request *uploadNationalIdImageRequest) (uploadNationalIdImageResponse, error) {
+	// if err := request.Payload.validate(); err != nil {
+	// 	return uploadNationalIdImageResponse{
+	// 		Code:    model.StatusBadRequest,
+	// 		Message: err.Error()}, err
+	// }
+
+	return uploadNationalIdImageResponse{
+		Payload: national_id_image_resp{
+			FullName:          "Le Dinh Trieu",
+			NationalId:        "123456789",
+			DateOfBirth:       time.Now(),
+			DateOfExpiry:      time.Now(),
+			Gender:            "Nam",
+			Address:           "TP HCM",
+			PlaceOfOrigin:     "TP HCM",
+			Nationality:       "Viet Nam",
+			NationalIdCardURL: "https://www.consilium.europa.eu/prado/images/EST-JO-06001/334716.jpg",
+		},
+	}, nil
+}
+
+/* */
+func __uploadFaceRegImage(ctx context.Context, request *uploadFaceRegImageRequest) (uploadFaceRegImageResponse, error) {
+	// if err := request.Payload.validate(); err != nil {
+	// 	return uploadNationalIdImageResponse{
+	// 		Code:    model.StatusBadRequest,
+	// 		Message: err.Error()}, err
+	// }
+
+	return uploadFaceRegImageResponse{
+		Payload: face_reg_image_resp{
+			FaceImageURL: "https://png.pngtree.com/png-clipart/20190924/original/pngtree-user-vector-avatar-png-image_4830521.jpg",
+			PersonId:     "ab123456",
+			StudentId:    "123",
+			FullName:     "Le Dinh Trieu",
+		},
+	}, nil
+}
+
+/* */
+func __filterListSession(ctx context.Context,
+	request *filterListSessionRequest) (
+	filterListSessionResponse, error) {
+	db_sessions, err := fsdb.AuthSession.GetAll(ctx)
+	if err != nil {
+		return filterListSessionResponse{
+			Code:    model.StatusServiceUnavailable,
+			Message: err.Error()}, err
+	}
+
+	var (
+		list_session = make([]session_data, 0)
+	)
+	for _, session := range db_sessions {
+		list_session = append(list_session, withAuthSessionModel(session))
+	}
+	return filterListSessionResponse{
+		Payload: list_session_resp{
+			TotalSession: len(list_session),
+			ListSession:  list_session,
+		},
+	}, nil
+}
+
+/* */
+func __filterListDevice(ctx context.Context,
+	request *filterListDeviceRequest) (
+	filterListDeviceResponse, error) {
+	db_devices, err := fsdb.DeviceProfile.GetAll(ctx)
+	if err != nil {
+		return filterListDeviceResponse{
+			Code:    model.StatusServiceUnavailable,
+			Message: err.Error()}, err
+	}
+
+	var (
+		list_device = make([]device_data, 0)
+	)
+	for _, device := range db_devices {
+		list_device = append(list_device, withDeviceModel(device))
+	}
+	return filterListDeviceResponse{
+		Payload: list_device_resp{
+			TotalDevice: len(list_device),
+			ListDevice:  list_device,
 		},
 	}, nil
 }

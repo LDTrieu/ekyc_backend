@@ -2,6 +2,7 @@ package fsdb
 
 import (
 	"context"
+	"ekyc-app/internal/model"
 	"errors"
 	"time"
 
@@ -13,6 +14,7 @@ import (
 type deviceProfileFs struct {
 	coll                string
 	fieldTerminalId     string
+	fieldTerminalName   string
 	fieldAvt            string
 	fieldHashedPassword string
 	fieldToken          string
@@ -25,6 +27,7 @@ type deviceProfileFs struct {
 var DeviceProfile = &deviceProfileFs{
 	coll:                "device_profile",
 	fieldTerminalId:     "terminal_id",
+	fieldTerminalName:   "terminal_name",
 	fieldAvt:            "avt",
 	fieldHashedPassword: "hashed_password",
 	fieldToken:          "token",
@@ -35,11 +38,13 @@ var DeviceProfile = &deviceProfileFs{
 }
 
 type DeviceProfileModel struct {
+	TerminalName   string    `json:"terminalName" firestore:"terminal_name"`
 	TerminalId     string    `json:"terminalId" firestore:"terminal_id"`
 	Avatar         string    `json:"avt" firestore:"avt"`
 	Token          string    `json:"token" firestore:"token"`
 	HashedPassword string    `json:"hashedPassword" firestore:"hashed_password"`
 	CreatedBy      string    `json:"createdBy" firestore:"created_by"`
+	ModifiedBy     string    `json:"modifiedBy" firestore:"modified_by"`
 	IsBlocked      bool      `json:"isBlocked" firestore:"is_blocked"`
 	LastLoginAt    time.Time `json:"lastLoginDate" firestore:"last_login_at"`
 	ModifiedAt     time.Time `json:"modifiedDate" firestore:"modified_at"`
@@ -47,10 +52,11 @@ type DeviceProfileModel struct {
 }
 
 func (ins *deviceProfileFs) Add(
-	ctx context.Context, terminal_id, avt, hashed_password,
+	ctx context.Context, terminal_id, terminal_name, avt, hashed_password,
 	create_by string) (id string, err error) {
 	init := DeviceProfileModel{
 		TerminalId:     terminal_id,
+		TerminalName:   terminal_name,
 		Avatar:         avt,
 		HashedPassword: hashed_password,
 		IsBlocked:      false,
@@ -79,6 +85,23 @@ func (ins *deviceProfileFs) CheckLogin(ctx context.Context, terminal_id, passwor
 	}
 	return doc_id, false, nil
 }
+
+func (ins *deviceProfileFs) GetTerminalIdByToken(
+	ctx context.Context, token string) (id, terminal_id string, ok bool, err error) {
+	var (
+		temp DeviceProfileModel
+	)
+	id, err = getOneEqual(ctx, &temp,
+		ins.coll, ins.fieldToken, token)
+	if err == model.ErrDocNotFound {
+		return "", "", false, nil
+	}
+	if err != nil {
+		return "", "", false, err
+	}
+	return id, temp.TerminalId, true, nil
+}
+
 func (ins *deviceProfileFs) SetToken(ctx context.Context, docId, token string, linked_at time.Time) error {
 	var update = map[string]interface{}{
 		ins.fieldLastLoginAt: linked_at,
@@ -113,4 +136,32 @@ func (ins *deviceProfileFs) ValidateTerminalId(ctx context.Context,
 		return false, err
 	}
 	return count > 0, nil
+}
+
+func (ins *deviceProfileFs) GetAll(ctx context.Context) (
+	[]*DeviceProfileModel, error) {
+	var (
+		list = make([]*DeviceProfileModel, 0)
+	)
+	if err := run(ctx, ins.coll, func(collectionRef *firestore.CollectionRef) error {
+		dIter := collectionRef.Documents(ctx)
+		for {
+			doc, err := dIter.Next()
+			if err == iterator.Done {
+				break
+			}
+			if err != nil {
+				return err
+			}
+			var temp DeviceProfileModel
+			if err := doc.DataTo(&temp); err != nil {
+				return err
+			}
+			list = append(list, &temp)
+		}
+		return nil
+	}); err != nil {
+		return nil, err
+	}
+	return list, nil
 }

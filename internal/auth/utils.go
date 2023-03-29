@@ -3,8 +3,8 @@ package auth
 import (
 	"context"
 	"ekyc-app/gcloud"
-	"ekyc-app/source/cfg"
-	"ekyc-app/source/wUtil"
+	"ekyc-app/internal/cfg"
+	"ekyc-app/internal/wUtil"
 	"encoding/base64"
 	"time"
 )

@@ -1,7 +1,7 @@
 package mobile
 
 import (
-	"ekyc-app/source/auth"
+	"ekyc-app/internal/auth"
 	"errors"
 	"time"
 )
@@ -87,9 +87,8 @@ type login_terminal_data struct {
 type signupTerminalRequest struct {
 	traceField
 	Credentials
-	Permit      *auth.DataJWT
-	Avt         string `json:"avt"`
-	Description string `json:"description"`
+	Permit       *auth.DataJWT
+	TerminalName string `json:"terminalName"`
 }
 
 type signupTerminalResponse struct {
@@ -104,4 +103,46 @@ func (ins *signupTerminalRequest) validate() error {
 	}
 
 	return nil
+}
+
+/* */
+type faceAuthSessionRequest struct {
+	traceField
+	Payload face_image_req `json:"payload"`
+}
+
+type faceAuthSessionResponse struct {
+	traceField
+	Code    int             `json:"code"`
+	Message string          `json:"message"`
+	Payload face_image_resp `json:"payload"`
+}
+type face_image_req struct {
+	// mock_test
+	TerminalId string `json:"terminalId"`
+	// StudentId  string `json:"studentId"`
+	FileName string `json:"fileName"`
+	File     []byte `json:"file"`
+}
+type face_image_resp struct {
+	FullName  string    `json:"fullName"`
+	FaceId    string    `json:"faceId"`
+	StudentId string    `json:"studentId"`
+	Avt       string    `json:"avt"`
+	UnitId    string    `json:"unitId"`
+	AuthAt    time.Time `json:"authAt"`
+}
+
+/* */
+type pingThirdPartyRequest struct {
+	traceField
+	//Payload face_image_req `json:"payload"`
+
+}
+
+type pingThirdPartyResponse struct {
+	traceField
+	Code    int    `json:"code"`
+	Message string `json:"message"`
+	//Payload face_image_resp `json:"payload"`
 }

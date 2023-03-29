@@ -2,8 +2,8 @@ package gcloud
 
 import (
 	"context"
+	"ekyc-app/internal/cfg"
 	"ekyc-app/package/wlog"
-	"ekyc-app/source/cfg"
 	"fmt"
 	"log"
 

@@ -2,18 +2,21 @@ package mobile
 
 import (
 	"context"
+	"ekyc-app/internal/auth"
+	"ekyc-app/internal/fsdb"
+	"ekyc-app/internal/model"
+	"ekyc-app/internal/service/faceauth"
+	"ekyc-app/internal/ws"
 	"ekyc-app/library/ascii"
 	"ekyc-app/package/token"
-	"ekyc-app/source/auth"
-	"ekyc-app/source/fsdb"
-	"ekyc-app/source/model"
-	"ekyc-app/source/ws"
 	"errors"
 	"fmt"
+	"log"
 	"net/http"
 	"time"
 
 	"github.com/google/uuid"
+	"go.mongodb.org/mongo-driver/bson/primitive"
 	"golang.org/x/crypto/bcrypt"
 )
 
@@ -44,13 +47,14 @@ func validateBearer(ctx context.Context,
 			}
 
 			// get from cache DB
-			_, account_id, ok, err := fsdb.PersonProfile.GetAccountIdByToken(ctx, bearer_token)
+			_, terminal_id, ok, err := fsdb.DeviceProfile.GetTerminalIdByToken(ctx, bearer_token)
 			if err != nil {
 				return http.StatusForbidden, bearer_token, &auth.DataJWT{}, err
 			}
 			if !ok {
 				return http.StatusForbidden, bearer_token, &auth.DataJWT{}, errors.New("token no login")
 			}
+
 			jwt_data, status, err := auth.ValidateLoginJWT(ctx, bearer_token)
 			if err != nil {
 				println("ValidateLoginJWT:", err.Error())
@@ -64,8 +68,8 @@ func validateBearer(ctx context.Context,
 			case token.ACCESS_TOKEN_EXPIRED:
 				return http.StatusForbidden, bearer_token, jwt_data, errors.New("token is expired")
 			case token.SUCCEED:
-				if jwt_data.AccountID != account_id {
-					return http.StatusForbidden, bearer_token, jwt_data, errors.New("account_id has been changed")
+				if jwt_data.AccountID != terminal_id {
+					return http.StatusForbidden, bearer_token, jwt_data, errors.New("terminal_id has been changed")
 				}
 				// auth pass
 				return http.StatusOK, bearer_token, jwt_data, nil
@@ -263,7 +267,7 @@ func __sigupTerminal(ctx context.Context,
 			Message: err.Error()}, err
 	}
 	// Insert to DB
-	_, err = fsdb.DeviceProfile.Add(ctx, request.TerminalId, request.Avt, string(hashedPassword), request.Permit.AccountID)
+	_, err = fsdb.DeviceProfile.Add(ctx, request.TerminalId, request.TerminalName, " request.Avt", string(hashedPassword), request.Permit.AccountID)
 	if err != nil {
 		return signupTerminalResponse{
 			Code:    model.StatusInternalServerError,
@@ -271,4 +275,90 @@ func __sigupTerminal(ctx context.Context,
 	}
 
 	return signupTerminalResponse{}, nil
+}
+
+/* */
+// pingThirdPartyRequest
+func __pingThirdParty(ctx context.Context,
+	request *pingThirdPartyRequest) (
+	pingThirdPartyResponse, error) {
+	var (
+		mock_data = faceauth.MockModel{
+			Name: "name_service_1",
+			Code: 123,
+		}
+	)
+	go func() {
+		// Call to auth service
+		code_resp, data_resp, err := faceauth.RequestSession(ctx,
+			&mock_data)
+		if err != nil {
+			log.Println("err: ", err)
+			// return pingThirdPartyResponse{
+			// 	Code:    model.StatusServiceUnavailable,
+			// 	Message: err.Error()}, err
+		}
+		log.Println("code_resp: ", code_resp)
+		log.Println("data_resp: ", data_resp)
+		//log.Println("time.Now() ", time.Now())
+	}()
+	//log.Println("time.Now() ", time.Now())
+	return pingThirdPartyResponse{}, nil
+}
+
+/* */
+func __faceAuthSession(ctx context.Context, request *faceAuthSessionRequest) (faceAuthSessionResponse, error) {
+
+	// var (
+	// 	face_data = options.FormFile{
+	// 		Filename: request.Payload.FileName,
+	// 		File:     request.Payload.File,
+	// 	}
+	// )
+	//log.Println("time.Now() 1: ", time.Now())
+	// code_resp, data_resp, err := faceauth.FaceAuthSession(ctx, &face_data)
+	// if err != nil {
+	// 	log.Println("ERR: ", err)
+	// 	return faceAuthSessionResponse{
+	// 		Code:    model.StatusServiceUnavailable,
+	// 		Message: err.Error()}, err
+	// }
+	// log.Println("code_resp: ", code_resp)
+	// log.Println("data_resp: ", data_resp)
+	// log.Println("time.Now() 2: ", time.Now())
+	var (
+		student_id  = "n18dccn229"
+		session_id  = primitive.NewObjectID().Hex()
+		terminal_id = request.Payload.TerminalId
+		auth_at     = time.Now()
+	)
+
+	// get name, face_id, student_id
+	_, full_name, _, _, _, _, _, _, unit_id, _, _, _, _, _, _, _, err := fsdb.StudentProfile.GetByStudentId(ctx, student_id)
+	if err != nil {
+		return faceAuthSessionResponse{
+			Code:    model.StatusServiceUnavailable,
+			Message: err.Error()}, err
+	}
+
+	// log session to db
+	_, err = fsdb.AuthSession.Add(ctx, session_id, student_id, "face_id", terminal_id, full_name, unit_id, "image_url",
+		auth_at)
+	if err != nil {
+		return faceAuthSessionResponse{
+			Code:    model.StatusServiceUnavailable,
+			Message: err.Error()}, err
+	}
+
+	// return to terminal
+	return faceAuthSessionResponse{
+		Payload: face_image_resp{
+			FullName:  full_name,
+			FaceId:    "data_resp.FaceId",
+			StudentId: student_id,
+			Avt:       "https://fff5fe774f075efc5ff8a6afe4708446203de4fb1e5932769fb01e1-apidata.googleusercontent.com/download/storage/v1/b/ekyc_image_bucket/o/n18dccn229%2Fimage_file.PNG?jk=Ac_6HjJEn8lHrno2jAS0_lp-N_p_0pFGuSBx069Voo19aEJ7KXnsotoBFTI0mVlYvtUZvs_NhFvJVVoDX2da1M0yqoXfav1Fp6eZimhIjDGrcfI2-r6FzB4PCv4CIxAaFeTfvZXwQXSj-RZacP8BDoc_rz6sF87pcUEG8_KZlDYY3eOZnDdMN7sWGVRQJcBKNHayYWKtuC2dWkGjrXwtEZIubKuuVqCeb1e-GFOC1-LRZq0HaHb2fdh8dfqQsnjsXEPVfKdYCqUAzdb1EWZvPpvL4k8-Yy6xvPEtBoEnwf-vBHD2fREJ-1x5TYcuqkPYUgnzm8WGTfPXMFaIQBQ8mquuWLTC8LuY6yd0TVz1MU63iY0RhkHBj8SEm08YPWIwERIYQ_RY-BdN2eGCGhvis52qDVvYlIUB3XougeCCgbmgJMyx8sUErzjG4hNyXu8Hl7ZcFXdfJkij3mtH9BjQH7oOihA5nM2Y433WV2b3LHnIHHsBIf4eCK8WHiE6Ch3YzOgr9win2ChKi2nhQMm6--nCht0_c5W40javgyfU5Z1it_iKuWt3uh0f182h1QZvJ3MF2hFZIvprfk62p3izw1QDo1eISHE01SVTd9k16d61R2wDLJH6G5FJS56X7gWyTQu7yWNEmCo0UEF05p_zrNNrMkwgh7tmH_2eFD0_IxfBQBPw1PXDoCeSje8x4k1AK1S2k5evknDNrxOuYfP-CysNpLCIMV_NEoFFHA96fLVQyd5OBcd13rMnamfsrOM4Rxe6ERfKFQHTeHLLqz4wQtyMe_3AKJiubCSSNwk_1un5YW_BXNrX4TBB7fv-gEqATfQYZVKv2yEMMYdS034IwjqA14dRcm0e2XO_jE0bCiUu_rWzDr59P8rEU-cNlt32CHCLwCgMPOvZb19IJUcdVBTsxA5u7NmuZIIV3fOcRWsWJ67w5zrA8WY_Pd4fuKTDFxrn7qHS1UiJPQXPUAZCFRbIxB84yHZ3kClrF-vmiAknRSsmMcy5-RiKV7XE34dcyRajO3KjFmKeJaB7yTScg7c_AIBRKrGKembQYghqkI_F64VFV5UL7qg22ITaHtWiJtWhDaz-sGBlrG2Y3yTEs8cqK4pmQ0hL8Mc9_zjO6gU2gUwn4tc9LRCLWHDGtlyl3Tbj2LCl22waGowIJ0rD2Q31tmGMaSp_R3FSshe4aY-hD5Sml9OGIGbGD10tHD5wGxJvXZ0T0lFaSa-A4wBlALpiZZ3XJYPmZ8KMdMga_Y-wzZqQv_tfQx2JTMGe&isca=1",
+			UnitId:    "data_resp.UnitId",
+			AuthAt:    auth_at,
+		},
+	}, nil
 }

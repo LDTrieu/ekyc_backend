@@ -3,6 +3,7 @@ package model
 const (
 	StatusOK             = 0
 	StatusDataNotFound   = 10
+	StatusFileNotFound   = 11
 	StatusDataDuplicated = 19
 	StatusDataNotMatched = 21
 

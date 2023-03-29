@@ -1,8 +1,8 @@
 package main
 
 import (
-	"ekyc-app/source/api/mobile"
-	"ekyc-app/source/api/portal"
+	"ekyc-app/internal/api/mobile"
+	"ekyc-app/internal/api/portal"
 
 	"github.com/gin-gonic/gin"
 )
