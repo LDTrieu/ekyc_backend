@@ -531,6 +531,46 @@ func __updateStudentEkyc(ctx context.Context, request *updateStudentEkycRequest)
 }
 
 /* */
+// __updateStudentFaceVideo
+func __uploadStudentFaceVideo(ctx context.Context, request *updateStudentFaceVideoRequest) (updateStudentFaceVideoResponse, error) {
+	doc_id, _, _, ok, err := fsdb.StudentProfile.GetNationIdByStudentId(ctx, request.Payload.StudentId)
+	if err != nil {
+		return updateStudentFaceVideoResponse{Code: model.StatusServiceUnavailable, Message: err.Error()}, err
+	}
+	if !ok {
+		return updateStudentFaceVideoResponse{Code: model.StatusNotFound, Message: "NOT_FOUND"}, errors.New("student_id does not exist")
+	}
+	// save face-video to DB
+	uri, err := gcloud.SaveFaceVideoFile(ctx, request.Payload.StudentId, request.Payload.FileName, request.Payload.File)
+	if err != nil {
+		return updateStudentFaceVideoResponse{Code: model.StatusServiceUnavailable, Message: err.Error()}, err
+	}
+	// save face-thumbnail to DB
+	uri_thumbnail, err := gcloud.SaveFaceThumnailFile(ctx, request.Payload.StudentId, request.Payload.FileName, request.Payload.FileThumbnail)
+	if err != nil {
+		return updateStudentFaceVideoResponse{Code: model.StatusServiceUnavailable, Message: err.Error()}, err
+	}
+	// update link photo to DB
+	var (
+		videoPath    = fmt.Sprintf("/ekyc_image_bucket/%s", uri)
+		videoURL     = fmt.Sprintf("https://storage.googleapis.com/ekyc_image_bucket/%s", uri)
+		thumbnailURL = fmt.Sprintf("https://storage.googleapis.com/ekyc_image_bucket/%s", uri_thumbnail)
+	)
+	log.Println("uri_thumbnail", uri_thumbnail)
+	log.Println("thumbnailURL", thumbnailURL)
+	if err := fsdb.StudentProfile.SetFaceVideoURL(ctx, doc_id, videoURL, thumbnailURL); err != nil {
+		return updateStudentFaceVideoResponse{Code: 55, Message: err.Error()}, err
+	}
+
+	return updateStudentFaceVideoResponse{
+		Payload: student_face_video_resp{
+			URL:  videoURL,
+			Path: videoPath,
+		},
+	}, nil
+}
+
+/* */
 func __studentDetail(ctx context.Context, request *studentDetailRequest) (studentDetailResponse, error) {
 	email, full_name, phone_number, national_id,
 		birthday, sex, address, address_origin, unit_id, image, image_ekyc, modified_by, created_by,
@@ -623,7 +663,7 @@ func __uploadFaceImage(ctx context.Context, request *uploadFaceImageRequest) (up
 }
 
 /* */
-func __uploadNationalIdImage(ctx context.Context, request *uploadNationalIdImageRequest) (uploadNationalIdImageResponse, error) {
+func __djangoNationalIdImage(ctx context.Context, request *uploadNationalIdImageRequest) (uploadNationalIdImageResponse, error) {
 	// if err := request.Payload.validate(); err != nil {
 	// 	return uploadNationalIdImageResponse{
 	// 		Code:    model.StatusBadRequest,
@@ -641,6 +681,68 @@ func __uploadNationalIdImage(ctx context.Context, request *uploadNationalIdImage
 			PlaceOfOrigin:     "TP HCM",
 			Nationality:       "Viet Nam",
 			NationalIdCardURL: "https://www.consilium.europa.eu/prado/images/EST-JO-06001/334716.jpg",
+		},
+	}, nil
+}
+
+/* */
+func __djangoFaceVideo(ctx context.Context, request *uploadNationalIdImageRequest) (uploadNationalIdImageResponse, error) {
+	// if err := request.Payload.validate(); err != nil {
+	// 	return uploadNationalIdImageResponse{
+	// 		Code:    model.StatusBadRequest,
+	// 		Message: err.Error()}, err
+	// }
+
+	// var (
+	// 	student_id = request.Payload.StudentId
+	// 	face_id    = primitive.NewObjectID().Hex()
+	// )
+
+	// go func(){
+
+	// }
+
+	return uploadNationalIdImageResponse{
+		Payload: national_id_image_resp{
+			FullName:          "Le Dinh Trieu",
+			NationalId:        "123456789",
+			DateOfBirth:       time.Now(),
+			DateOfExpiry:      time.Now(),
+			Gender:            "Nam",
+			Address:           "TP HCM",
+			PlaceOfOrigin:     "TP HCM",
+			Nationality:       "Viet Nam",
+			NationalIdCardURL: "https://www.consilium.europa.eu/prado/images/EST-JO-06001/334716.jpg",
+		},
+	}, nil
+}
+
+/* */
+func __uploadNationalIdImage(ctx context.Context, request *uploadNationalIdImageRequest) (uploadNationalIdImageResponse, error) {
+	doc_id, _, _, ok, err := fsdb.StudentProfile.GetNationIdByStudentId(ctx, request.Payload.StudentId)
+	if err != nil {
+		return uploadNationalIdImageResponse{Code: model.StatusServiceUnavailable, Message: err.Error()}, err
+	}
+	if !ok {
+		return uploadNationalIdImageResponse{Code: model.StatusNotFound, Message: "NOT_FOUND"}, errors.New("student_id does not exist")
+	}
+	// save image to DB
+	uri, err := gcloud.SaveEkycImageFile(ctx, request.Payload.StudentId, request.Payload.FileName, request.Payload.File)
+	if err != nil {
+		return uploadNationalIdImageResponse{Code: model.StatusServiceUnavailable, Message: err.Error()}, err
+	}
+	// update link photo to DB
+	var (
+		//photoPath = fmt.Sprintf("/ekyc_image_bucket/%s", uri)
+		photoURL = fmt.Sprintf("https://storage.googleapis.com/ekyc_image_bucket/%s", uri)
+	)
+	if err := fsdb.StudentProfile.SetNationalIdImageURL(ctx, doc_id, photoURL); err != nil {
+		return uploadNationalIdImageResponse{Code: model.StatusServiceUnavailable, Message: err.Error()}, err
+	}
+
+	return uploadNationalIdImageResponse{
+		Payload: national_id_image_resp{
+			NationalIdCardURL: photoURL,
 		},
 	}, nil
 }
@@ -711,4 +813,90 @@ func __filterListDevice(ctx context.Context,
 			ListDevice:  list_device,
 		},
 	}, nil
+}
+
+/* */
+func __deviceDetail(ctx context.Context, request *deviceDetailRequest) (deviceDetailResponse, error) {
+	terminal_name, avt, is_blocked, modified_by, created_by,
+		last_login_at, modified_at, created_at, ok, err := fsdb.DeviceProfile.GetByTerminalId(ctx, request.TerminalId)
+	if err != nil {
+		return deviceDetailResponse{Code: model.StatusServiceUnavailable, Message: err.Error()}, err
+	}
+	if !ok {
+		return deviceDetailResponse{Code: model.StatusNotFound, Message: "NOT FOUND"}, errors.New("student_id does not exist")
+	}
+
+	return deviceDetailResponse{
+		Payload: device_detail_data{
+			TerminalId:   request.TerminalId,
+			TerminalName: terminal_name,
+			Avatar:       avt,
+			IsBlocked:    is_blocked,
+			LastLoginAt:  last_login_at,
+			ModifiedBy:   modified_by,
+			ModifiedAt:   modified_at,
+			CreatedBy:    created_by,
+			CreatedAt:    created_at,
+		}}, nil
+}
+
+/* */
+func __updateDevice(ctx context.Context, request *updateDeviceRequest) (updateDeviceResponse, error) {
+	// if err := request.Payload.validate(); err != nil {
+	// 	return updateStudentResponse{
+	// 		Code:    model.StatusBadRequest,
+	// 		Message: err.Error()}, err
+	// }
+	// validate fields
+	terminal_id_already_exist, err := fsdb.DeviceProfile.ValidateTerminalId(ctx, request.Payload.TerminalId)
+	if err != nil {
+		return updateDeviceResponse{Code: model.StatusServiceUnavailable, Message: err.Error()}, err
+	}
+	if !terminal_id_already_exist {
+		return updateDeviceResponse{Code: model.StatusDataNotFound, Message: "TERMINAL_ID_NOT_EXIST"}, errors.New("terminal_id not exist")
+	}
+
+	if err := fsdb.DeviceProfile.SetIsBlocked(ctx, request.Payload.TerminalId, request.Payload.IsBlocked); err != nil {
+		return updateDeviceResponse{
+			Code:    model.StatusServiceUnavailable,
+			Message: err.Error()}, err
+	}
+
+	return updateDeviceResponse{}, nil
+}
+
+/* */
+
+func __mockAuthSession(ctx context.Context, request *mockAuthSessionRequest) (mockAuthSessionResponse, error) {
+
+	var (
+		session_id  = primitive.NewObjectID().Hex()
+		student_id  = request.Payload.StudentId
+		face_id     = "123456a"
+		full_name   = "Le Dinh Trieu"
+		terminal_id = "123456a"
+		unit_id     = "d18cqcp02-n"
+		image_url   = "https://png.pngtree.com/png-clipart/20190924/original/pngtree-user-vector-avatar-png-image_4830521.jpg"
+		auth_at     = time.Date(2023, 04, request.Payload.Date, request.Payload.Hour, 30, 15, 00, time.Local)
+	)
+	_, err := fsdb.AuthSession.Add(ctx, session_id, student_id, face_id, terminal_id, full_name, unit_id, image_url, auth_at)
+	if err != nil {
+		return mockAuthSessionResponse{Code: model.StatusServiceUnavailable, Message: err.Error()}, err
+	}
+
+	return mockAuthSessionResponse{}, nil
+}
+
+func __reportAuthSession(ctx context.Context, request *reportAuthSessionRequest) (reportAuthSessionResponse, error) {
+	var (
+		student_id = request.Payload.StudentId
+		month      = request.Payload.Month
+	)
+	log.Println("student_id", student_id)
+	_, err := fsdb.AuthSession.ReportByMonth(ctx, student_id, month)
+	if err != nil {
+		return reportAuthSessionResponse{Code: model.StatusServiceUnavailable, Message: err.Error()}, err
+	}
+	return reportAuthSessionResponse{}, nil
+
 }

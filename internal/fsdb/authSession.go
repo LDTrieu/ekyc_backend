@@ -2,6 +2,8 @@ package fsdb
 
 import (
 	"context"
+	"log"
+	"sort"
 	"time"
 
 	"cloud.google.com/go/firestore"
@@ -43,8 +45,16 @@ type AuthSessionModel struct {
 	AuthAt     time.Time `json:"authAt" firestore:"auth_at"`
 }
 
+type AuthSessionByDate struct {
+	Date         int       `json:"date"`
+	TimeIn       time.Time `json:"timeIn"`
+	TimeOut      time.Time `json:"timeOut"`
+	DurationTime time.Time `json:"durationTime"`
+}
+
 func (ins *authSessionFs) Add(ctx context.Context,
-	session_id, student_id, face_id, terminal_id, full_name, unit_id, image_url string, auth_at time.Time) (id string, err error) {
+	session_id, student_id, face_id, terminal_id,
+	full_name, unit_id, image_url string, auth_at time.Time) (id string, err error) {
 	var item = AuthSessionModel{
 		SessionId:  session_id,
 		StudentId:  student_id,
@@ -82,6 +92,65 @@ func (ins *authSessionFs) GetAll(ctx context.Context) (
 		return nil
 	}); err != nil {
 		return nil, err
+	}
+	return list, nil
+}
+
+func (ins *authSessionFs) ReportByMonth(ctx context.Context, student_id string, month int) (
+	[]*AuthSessionByDate, error) {
+	var (
+		list_model = make([]*AuthSessionModel, 0)
+		list       = make([]*AuthSessionByDate, 31)
+		byAuthAt   = func(ams1, ams2 *AuthSessionModel) bool {
+			return ams1.AuthAt.Before(ams2.AuthAt)
+		}
+	)
+
+	if err := run(ctx, ins.coll, func(collectionRef *firestore.CollectionRef) error {
+		dIter := collectionRef.
+			Where(ins.fieldStudentId, Equal, student_id).Documents(ctx)
+
+		for {
+			doc, err := dIter.Next()
+			if err == iterator.Done {
+				break
+			}
+			if err != nil {
+				return err
+			}
+			var temp AuthSessionModel
+			if err := doc.DataTo(&temp); err != nil {
+				return err
+			}
+
+			list_model = append(list_model, &temp)
+		}
+		sort.Slice(list_model, func(i, j int) bool {
+			return byAuthAt(list_model[i], list_model[j])
+		})
+
+		return nil
+	}); err != nil {
+		return nil, err
+	}
+
+	// for k, v := range list {
+	// 	for key, value := range list_model {
+	// 		if value.AuthAt.Day() == list[k+1] {
+	// 			list[k].TimeIn = value.AuthAt
+	// 			if list[k].TimeIn < value.AuthAt {
+	// 				list[k].TimeOut = value.AuthAt
+	// 			}
+	// 			//list[k].TimeOut=value.
+	// 			//list1[i].b = list2[j].ab
+	// 			break
+	// 		}
+	// 	}
+	// }
+
+	// }
+	for k, v := range list_model {
+		log.Println("k: ", k, "value: ", v.AuthAt.Local().Location(), " ", v.AuthAt.Hour())
 	}
 	return list, nil
 }

@@ -36,3 +36,16 @@ func Test_GetAllAuthSession(t *testing.T) {
 	}
 	log.Fatal("OKE: ", len(list))
 }
+
+func Test_ReportByMonth(t *testing.T) {
+	var (
+		ctx        = context.Background()
+		student_id = "n18dccn240"
+		month      = 4
+	)
+	_, err := AuthSession.ReportByMonth(ctx, student_id, month)
+	if err != nil {
+		t.Fatal("Err")
+	}
+	log.Println("OKE")
+}

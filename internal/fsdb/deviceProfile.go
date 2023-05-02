@@ -102,6 +102,22 @@ func (ins *deviceProfileFs) GetTerminalIdByToken(
 	return id, temp.TerminalId, true, nil
 }
 
+func (ins *deviceProfileFs) SetIsBlocked(
+	ctx context.Context, terminal_id string, is_blocked bool) error {
+	doc_id, _, _, err := ins.GetModelByTerminalId(ctx, terminal_id)
+	if err == model.ErrDocNotFound {
+		return err
+	}
+	if err != nil {
+		return err
+	}
+	var update = map[string]interface{}{
+		ins.fieldIsBlocked: is_blocked,
+	}
+
+	return updateFields(ctx, doc_id, ins.coll, update)
+}
+
 func (ins *deviceProfileFs) SetToken(ctx context.Context, docId, token string, linked_at time.Time) error {
 	var update = map[string]interface{}{
 		ins.fieldLastLoginAt: linked_at,
@@ -136,6 +152,38 @@ func (ins *deviceProfileFs) ValidateTerminalId(ctx context.Context,
 		return false, err
 	}
 	return count > 0, nil
+}
+func (ins *deviceProfileFs) GetModelByTerminalId(
+	ctx context.Context, terminal_id string) (
+	id string, info *DeviceProfileModel, ok bool, err error) {
+	var (
+		temp DeviceProfileModel
+	)
+	id, err = getOneEqual(ctx, &temp, ins.coll, ins.fieldTerminalId, terminal_id)
+	if err == model.ErrDocNotFound {
+		return "", nil, false, nil
+	}
+	if err != nil {
+		return "", nil, false, err
+	}
+	return id, &temp, true, nil
+}
+
+func (ins *deviceProfileFs) GetByTerminalId(
+	ctx context.Context, terminal_id string) (
+	terminal_name, avt string,
+	is_blocked bool, modified_by, created_by string,
+	last_login_at, modified_at, created_at time.Time, ok bool, err error) {
+	_, info, _, err := ins.GetModelByTerminalId(ctx, terminal_id)
+	if err == model.ErrDocNotFound {
+		return "", "", true, "", "", time.Time{}, time.Time{}, time.Time{}, false, err
+	}
+	if err != nil {
+		return "", "", true, "", "", time.Time{}, time.Time{}, time.Time{}, false, err
+	}
+	return info.TerminalName, info.Avatar, false,
+		info.ModifiedBy, info.CreatedBy,
+		info.LastLoginAt, info.ModifiedAt, info.CreatedAt, true, nil
 }
 
 func (ins *deviceProfileFs) GetAll(ctx context.Context) (

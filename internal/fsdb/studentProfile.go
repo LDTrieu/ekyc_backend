@@ -34,6 +34,8 @@ type studentProfileFs struct {
 	fieldFullNameEkyc      string
 	fieldFaceImageURL      string
 	fieldNationalIdCardURL string
+	fieldFaceVideoURL      string
+	fieldFaceThumbnailURL  string
 	fieldAddressEkyc       string
 	fieldPlaceOfOrigin     string
 	fieldNationality       string
@@ -61,16 +63,17 @@ var StudentProfile = &studentProfileFs{
 	fieldFullNameEkyc:      "full_name_ekyc",
 	fieldFaceImageURL:      "face_image_url",
 	fieldNationalIdCardURL: "national_id_card_url",
-
-	fieldModifiedBy:    "modified_by",
-	fieldModifiedAt:    "modified_at",
-	fieldCreatedBy:     "created_by",
-	fieldCreatedAt:     "created_at",
-	fieldAddressEkyc:   "address_ekyc",
-	fieldPlaceOfOrigin: "place_of_origin",
-	fieldNationality:   "nationality",
-	fieldDateOfBirth:   "date_of_birth",
-	fieldDateOfExpiry:  "date_of_expiry",
+	fieldFaceVideoURL:      "face_video_url",
+	fieldFaceThumbnailURL:  "face_thumbnail_url",
+	fieldModifiedBy:        "modified_by",
+	fieldModifiedAt:        "modified_at",
+	fieldCreatedBy:         "created_by",
+	fieldCreatedAt:         "created_at",
+	fieldAddressEkyc:       "address_ekyc",
+	fieldPlaceOfOrigin:     "place_of_origin",
+	fieldNationality:       "nationality",
+	fieldDateOfBirth:       "date_of_birth",
+	fieldDateOfExpiry:      "date_of_expiry",
 
 	fieldIsBlocked: "is_blocked",
 }
@@ -87,21 +90,22 @@ type StudentProfileModel struct {
 	Sex         string    `json:"sex"  firestore:"sex"`
 	Address     string    `json:"address" firestore:"address"`
 
-	PersonId          string `json:"personId" firestore:"person_id"`
-	FullNameEkyc      string `json:"fullNameEkyc" firestore:"full_name_ekyc"`
-	NationalId        string `json:"nationalId" firestore:"national_id"`
-	FaceImageURL      string `json:"faceImageURL" firestore:"face_image_url"`
-	NationalIdCardURL string `json:"nationalIdCardURL" firestore:"national_id_card_url"`
-
-	ModifiedBy    string    `json:"modifiedBy" firestore:"modified_by"`
-	ModifiedAt    time.Time `json:"modifiedAt" firestore:"modified_at"`
-	CreatedBy     string    `json:"createdBy" firestore:"created_by"`
-	CreatedAt     time.Time `json:"createdAt" firestore:"created_at"`
-	AddressEkyc   string    `json:"addressEkyc" firestore:"address_ekyc"`
-	PlaceOfOrigin string    `json:"placeOfOrigin" firestore:"place_of_origin"`
-	Nationality   string    `json:"nationality" firestore:"nationality"`
-	DateOfBirth   time.Time `json:"dateOfBirth" firestore:"date_of_birth"`
-	DateOfExpiry  time.Time `json:"dateOfExpiry" firestore:"date_of_expiry"`
+	PersonId          string    `json:"personId" firestore:"person_id"`
+	FullNameEkyc      string    `json:"fullNameEkyc" firestore:"full_name_ekyc"`
+	NationalId        string    `json:"nationalId" firestore:"national_id"`
+	FaceImageURL      string    `json:"faceImageURL" firestore:"face_image_url"`
+	NationalIdCardURL string    `json:"nationalIdCardURL" firestore:"national_id_card_url"`
+	FaceVideoURL      string    `json:"faceVideoURL" firestore:"face_video_url"`
+	FaceThumbnailURL  string    `json:"faceThumbnailURL" firestore:"face_thumbnail_url"`
+	ModifiedBy        string    `json:"modifiedBy" firestore:"modified_by"`
+	ModifiedAt        time.Time `json:"modifiedAt" firestore:"modified_at"`
+	CreatedBy         string    `json:"createdBy" firestore:"created_by"`
+	CreatedAt         time.Time `json:"createdAt" firestore:"created_at"`
+	AddressEkyc       string    `json:"addressEkyc" firestore:"address_ekyc"`
+	PlaceOfOrigin     string    `json:"placeOfOrigin" firestore:"place_of_origin"`
+	Nationality       string    `json:"nationality" firestore:"nationality"`
+	DateOfBirth       time.Time `json:"dateOfBirth" firestore:"date_of_birth"`
+	DateOfExpiry      time.Time `json:"dateOfExpiry" firestore:"date_of_expiry"`
 
 	IsBlocked bool `json:"isBlocked" firestore:"is_blocked"`
 }
@@ -335,6 +339,25 @@ func (ins *studentProfileFs) SetFaceImageURL(
 	ctx context.Context, docId, photoURL string) error {
 	var update = map[string]interface{}{
 		ins.fieldImage: photoURL,
+	}
+
+	return updateFields(ctx, docId, ins.coll, update)
+}
+
+func (ins *studentProfileFs) SetNationalIdImageURL(
+	ctx context.Context, docId, photoURL string) error {
+	var update = map[string]interface{}{
+		ins.fieldNationalIdCardURL: photoURL,
+	}
+
+	return updateFields(ctx, docId, ins.coll, update)
+}
+
+func (ins *studentProfileFs) SetFaceVideoURL(
+	ctx context.Context, docId, videoURL, thumbnailURL string) error {
+	var update = map[string]interface{}{
+		ins.fieldFaceVideoURL:     videoURL,
+		ins.fieldFaceThumbnailURL: thumbnailURL,
 	}
 
 	return updateFields(ctx, docId, ins.coll, update)

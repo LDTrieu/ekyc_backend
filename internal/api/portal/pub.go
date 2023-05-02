@@ -38,6 +38,7 @@ func Reg(router *gin.Engine) {
 	router.POST("/portal/student/create/:reqId", createStudentProfile)
 	router.POST("/portal/student/update-ekyc/:reqId", updateStudentEkyc)
 	router.POST("/portal/student/update/:reqId", updateStudent)
+
 	//router.GET("/portal/student/list-pdf/:reqId", downloadStudentList)
 	//router.POST("/portal/student/update-submit/:reqId", createStudentProfile)
 
@@ -46,13 +47,23 @@ func Reg(router *gin.Engine) {
 
 	// Device
 	router.GET("/portal/device/list/:reqId", filterListDevice)
+	router.GET("/portal/device/detail/:reqId", deviceDetail)
+	router.POST("/portal/device/update/:reqId", updateDevice)
 
 	// Upload file
 	router.POST("/portal/file/upload/face-image/:studentId/:reqId", uploadFaceImage)
 	router.POST("/portal/file/upload/national-id-card/:reqId", uploadNationalIdImage)
 	router.POST("/portal/file/upload/face-reg/:reqId", uploadFaceRegImage)
+	router.POST("/portal/file/update/face-video/:reqId", updateStudentFaceVideo)
 
 	// router.POST("/portal/file/upload/student-card/:reqId", uploadStudentCardImage)
+	//router.GET("/portal/file/gen-student-pdf/:reqId", genPDF)
+
+	// Mock
+	router.POST("portal/mock/auth-session/:reqId", mockAuthSession)
+
+	// Report
+	router.POST("portal/report/auth-session/:reqId", reportAuthSession)
 
 }
 
@@ -317,6 +328,69 @@ func updateStudentEkyc(c *gin.Context) {
 }
 
 /* */
+func updateStudentFaceVideo(c *gin.Context) {
+	// validate token
+	// status, _, auth_data, err := validateBearer(c.Request.Context(), c.Request)
+	// if err != nil {
+	// 	c.AbortWithError(status, err)
+	// 	return
+	// }
+	var (
+		request = updateStudentFaceVideoRequest{
+			traceField: traceField{
+				RequestId: c.Param("reqId"),
+			},
+			// Permit: auth_data,
+			Payload: student_face_video_req{
+				StudentId: c.Query("studentId"),
+				FileName:  fmt.Sprintf("%s_%s.bin", "studentId", primitive.NewObjectID().Hex()),
+			},
+		}
+	)
+	// validate video file
+	// Read multipart form files
+	multipart_form, err := net.NewMultipartForm(c)
+	if err != nil {
+		c.AbortWithError(http.StatusBadRequest, err)
+		return
+	}
+	filename, err := multipart_form.GetForm("filename")
+	if err != nil {
+		wlog.Error(c, err)
+	}
+	file_name, file, err := multipart_form.GetFile("filename")
+	if err != nil {
+		wlog.Error(c, err)
+	}
+	_, file_thumbnail, err := multipart_form.GetFile("thumbnail")
+	if err != nil {
+		wlog.Error(c, err)
+	}
+	request.Payload.FileName = func() string {
+		if len(filename) > 0 {
+			return filename
+		}
+		return file_name
+	}()
+	request.Payload.File = file
+	request.Payload.FileThumbnail = file_thumbnail
+	// resp, err := __djangoFaceVideo(c.Request.Context(), &request)
+	// if err != nil {
+	// 	wlog.Error(c, err)
+	// }
+
+	// // upload to google cloud
+	// resp, err := __uploadStudentFaceVideo(c.Request.Context(), &request)
+	// if err != nil {
+	// 	wlog.Error(c, err)
+	// }
+
+	// Trace client and result
+	// resp.traceField = request.traceField
+	// c.JSON(http.StatusOK, resp)
+}
+
+/* */
 func studentDetail(c *gin.Context) {
 	// validate token
 	status, _, from, err := validateBearer(
@@ -458,8 +532,8 @@ func uploadNationalIdImage(c *gin.Context) {
 			},
 			//Permit: from,
 			Payload: national_id_image_req{
-				//StudentId: c.Param("studentId"),
-				FileName: fmt.Sprintf("%s_%s.bin", "studentId", primitive.NewObjectID().Hex()),
+				StudentId: c.Query("studentId"),
+				FileName:  fmt.Sprintf("%s_%s.bin", "studentId", primitive.NewObjectID().Hex()),
 			},
 		}
 	)
@@ -485,7 +559,13 @@ func uploadNationalIdImage(c *gin.Context) {
 		return file_name
 	}()
 	request.Payload.File = file
-	resp, err := __uploadNationalIdImage(c.Request.Context(), &request)
+	resp, err := __djangoNationalIdImage(c.Request.Context(), &request)
+	if err != nil {
+		wlog.Error(c, err)
+	}
+
+	// upload to google cloud
+	resp, err = __uploadNationalIdImage(c.Request.Context(), &request)
 	if err != nil {
 		wlog.Error(c, err)
 	}
@@ -613,4 +693,175 @@ func filterListDevice(c *gin.Context) {
 	resp.traceField = request.traceField
 	c.JSON(http.StatusOK, resp)
 
+}
+
+/* */
+func deviceDetail(c *gin.Context) {
+	// validate token
+	status, _, from, err := validateBearer(
+		c.Request.Context(), c.Request)
+	if err != nil {
+		c.AbortWithError(status, err)
+		return
+	}
+	var (
+		request = deviceDetailRequest{
+			traceField: traceField{
+				RequestId: c.Param("reqId"),
+			},
+			Permit:     from,
+			TerminalId: c.Query("terminalId"),
+		}
+	)
+	resp, err := __deviceDetail(
+		c.Request.Context(), &request)
+	if err != nil {
+		wlog.Error(c, err)
+	}
+	// Trace client and result
+	resp.traceField = request.traceField
+	c.JSON(http.StatusOK, resp)
+}
+
+/* */
+func updateDevice(c *gin.Context) {
+	// validate token
+	status, _, auth_data, err := validateBearer(c.Request.Context(), c.Request)
+	if err != nil {
+		c.AbortWithError(status, err)
+		return
+	}
+	// is_blocked, err := strconv.ParseBool(c.Query("isBlocked"))
+	// if err != nil {
+	// 	c.AbortWithError(status, err)
+	// 	return
+	// }
+
+	var (
+		request = updateDeviceRequest{
+			traceField: traceField{
+				RequestId: c.Param("reqId"),
+			},
+			Permit: auth_data,
+
+			// Payload: update_student_data{
+			// 	IsBlocked: is_blocked,
+			// },
+		}
+	)
+	log.Println("request.Payload: ", request.Payload)
+	if err := c.BindJSON(&request.Payload); err != nil {
+		log.Println("err: ", err)
+		c.AbortWithError(http.StatusBadRequest, err)
+		return
+	}
+	resp, err := __updateDevice(c.Request.Context(), &request)
+	if err != nil {
+		wlog.Error(c, err)
+	}
+
+	// Trace client and result
+	resp.traceField = request.traceField
+	c.JSON(http.StatusOK, resp)
+}
+
+/* */
+// func genPDF(c *gin.Context) {
+// 	// validate token
+// 	status, _, auth_data, err := validateBearer(c.Request.Context(), c.Request)
+// 	if err != nil {
+// 		c.AbortWithError(status, err)
+// 		return
+// 	}
+// 	// is_blocked, err := strconv.ParseBool(c.Query("isBlocked"))
+// 	// if err != nil {
+// 	// 	c.AbortWithError(status, err)
+// 	// 	return
+// 	// }
+
+// 	var (
+// 		request = genPDFRequest{
+// 			traceField: traceField{
+// 				RequestId: c.Param("reqId"),
+// 			},
+// 			Permit:    auth_data,
+// 			StudentId: c.Query("studentId"),
+// 			Begin:     time.Date(2022, 11, 15, 9, 30, 12, 00, time.Local),
+// 		}
+// 	)
+// 	// log.Println("request.Payload: ", request.Payload)
+// 	// if err := c.BindJSON(&request.Payload); err != nil {
+// 	// 	log.Println("err: ", err)
+// 	// 	c.AbortWithError(http.StatusBadRequest, err)
+// 	// 	return
+// 	// }
+// 	resp, err := __genPDF(c.Request.Context(), &request)
+// 	if err != nil {
+// 		wlog.Error(c, err)
+// 	}
+
+// 	// Trace client and result
+// 	resp.traceField = request.traceField
+// 	c.JSON(http.StatusOK, resp)
+// }
+
+/* */
+func mockAuthSession(c *gin.Context) {
+	// validate token
+	// status, _, auth_data, err := validateBearer(c.Request.Context(), c.Request)
+	// if err != nil {
+	// 	c.AbortWithError(status, err)
+	// 	return
+	// }
+
+	var (
+		request = mockAuthSessionRequest{
+			traceField: traceField{
+				RequestId: c.Param("reqId"),
+			},
+
+			// Payload: update_student_data{
+			// 	IsBlocked: is_blocked,
+			// },
+		}
+	)
+	log.Println("request.Payload: ", request.Payload)
+	if err := c.BindJSON(&request.Payload); err != nil {
+		log.Println("err: ", err)
+		c.AbortWithError(http.StatusBadRequest, err)
+		return
+	}
+	resp, err := __mockAuthSession(c.Request.Context(), &request)
+	if err != nil {
+		wlog.Error(c, err)
+	}
+
+	// Trace client and result
+	resp.traceField = request.traceField
+	c.JSON(http.StatusOK, resp)
+}
+
+func reportAuthSession(c *gin.Context) {
+	var (
+		request = reportAuthSessionRequest{
+			traceField: traceField{
+				RequestId: c.Param("reqId"),
+			},
+
+			// Payload: update_student_data{
+			// 	IsBlocked: is_blocked,
+		}
+	)
+	if err := c.BindJSON(&request.Payload); err != nil {
+		log.Println("err: ", err)
+		c.AbortWithError(http.StatusBadRequest, err)
+		return
+	}
+	resp, err := __reportAuthSession(c.Request.Context(), &request)
+	if err != nil {
+		wlog.Error(c, err)
+	}
+	// Trace client and result
+	resp.traceField = request.traceField
+	c.JSON(http.StatusOK, resp)
 }

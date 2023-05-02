@@ -227,11 +227,17 @@ type student_data struct {
 }
 
 func withStudentModel(sm *fsdb.StudentProfileModel) student_data {
+	var (
+		face_image_url = "https://tuk-cdn.s3.amazonaws.com/assets/components/advance_tables/at_1.png"
+	)
+	if len(sm.FaceImageURL) > 0 {
+		face_image_url = sm.FaceImageURL
+	}
 	return student_data{
 		//student_detail
 		FullName:    sm.FullName,
 		StudentId:   sm.StudentId,
-		Image:       "https://tuk-cdn.s3.amazonaws.com/assets/components/advance_tables/at_1.png",
+		Image:       face_image_url,
 		PhoneNumber: sm.PhoneNumber,
 		Birthday:    sm.Birthday,
 		UnitId:      sm.UnitId,
@@ -501,6 +507,44 @@ func (ins *update_ekyc_data) validate() error {
 }
 
 /* */
+// updateStudentFaceVideo
+type updateStudentFaceVideoRequest struct {
+	traceField
+	Permit  *auth.DataJWT
+	Payload student_face_video_req `json:"payload"`
+}
+
+type updateStudentFaceVideoResponse struct {
+	traceField
+	Code    int                     `json:"code"`
+	Message string                  `json:"message"`
+	Payload student_face_video_resp `json:"payload"`
+}
+type student_face_video_req struct {
+	StudentId     string `json:"studentId"`
+	FileName      string `json:"fileName"`
+	File          []byte `json:"file"`
+	Thumbnail     string `json:"thumbnail"`
+	FileThumbnail []byte `json:"filethumbnail"`
+}
+type student_face_video_resp struct {
+	URL       string `json:"url"`
+	Path      string `json:"photoPath"`
+	VideoData string `json:"videoData"`
+}
+
+func (ins *student_face_video_req) validate() error {
+	if len(ins.StudentId) < 1 {
+		return errors.New("student_id invalids")
+	}
+	if len(ins.FileName) < 3 {
+		ins.FileName = fmt.Sprintf("%s_%s.bin", ins.StudentId, primitive.NewObjectID().Hex())
+	}
+
+	return nil
+}
+
+/* */
 //updateStudentRequest
 type updateStudentRequest struct {
 	traceField
@@ -606,4 +650,118 @@ func withDeviceModel(dm *fsdb.DeviceProfileModel) device_data {
 		ModifiedBy:   dm.ModifiedBy,
 		ModifiedAt:   dm.ModifiedAt,
 	}
+}
+
+/* */
+
+type deviceDetailRequest struct {
+	traceField
+	Permit     *auth.DataJWT
+	TerminalId string
+	// Payload   device_profile_data `json:"payload"`
+}
+
+type deviceDetailResponse struct {
+	traceField
+	Code    int                `json:"code"`
+	Message string             `json:"message"`
+	Payload device_detail_data `json:"payload"`
+}
+
+type device_detail_data struct {
+	TerminalId   string    `json:"terminalId"`
+	TerminalName string    `json:"terminalName"`
+	Avatar       string    `json:"avt"`
+	IsBlocked    bool      `json:"isBlocked"`
+	LastLoginAt  time.Time `json:"lastLoginAt"`
+	ModifiedBy   string    `json:"modifiedBy"`
+	ModifiedAt   time.Time `json:"modifiedAt"`
+	CreatedBy    string    `json:"createdBy"`
+	CreatedAt    time.Time `json:"createdAt"`
+}
+
+type updateDeviceRequest struct {
+	traceField
+	Permit  *auth.DataJWT
+	Payload update_device_data `json:"payload"`
+}
+type updateDeviceResponse struct {
+	traceField
+	Code    int    `json:"code"`
+	Message string `json:"message"`
+}
+
+type update_device_data struct {
+	TerminalId string `json:"terminalId"`
+	IsBlocked  bool   `json:"isBlocked"`
+}
+
+/* */
+
+type genPDFRequest struct {
+	traceField
+	Permit *auth.DataJWT
+	//Payload update_device_data `json:"payload"`
+	StudentId string
+	Begin     time.Time
+}
+type genPDFResponse struct {
+	traceField
+	Code    int          `json:"code"`
+	Message string       `json:"message"`
+	Payload gen_pdf_data `json:"payload"`
+}
+
+type gen_pdf_data struct {
+	PDFUrl string `json:"PDFUrl"`
+}
+
+/* */
+type mockAuthSessionRequest struct {
+	traceField
+	Payload mock_auth_session_req_data
+}
+
+type mockAuthSessionResponse struct {
+	traceField
+	Code    int    `json:"code"`
+	Message string `json:"message"`
+}
+
+type mock_auth_session_req_data struct {
+	StudentId string `json:"studentId"`
+	// AuthAt    time.Time `json:"authAt"`
+	Date int `json:"date"`
+	Hour int `json:"hour"`
+}
+
+/* */
+
+type reportAuthSessionRequest struct {
+	traceField
+	Payload report_auth_session_req_data
+}
+
+type reportAuthSessionResponse struct {
+	traceField
+	Code    int                           `json:"code"`
+	Message string                        `json:"message"`
+	Payload report_auth_session_resp_data `json:"payload"`
+}
+
+type report_auth_session_req_data struct {
+	StudentId string `json:"studentId"`
+	Month     int    `json:"month"`
+}
+
+type report_auth_session_resp_data struct {
+	TotalSessionByDate float32     `json:"totalSessionByDate"`
+	ListSessionByDate  []user_data `json:"listSessionByDate"`
+}
+
+type report_auth_session_data struct {
+	Date         int       `json:"date"`
+	TimeIn       time.Time `json:"timeIn"`
+	TimeOut      time.Time `json:"timeOut"`
+	DurationTime time.Time `json:"durationTime"`
 }
