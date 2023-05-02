@@ -118,3 +118,55 @@ func FaceAuthSession(ctx context.Context,
 	}
 	return result.Code, &result.Payload, nil
 }
+
+func AddFace(ctx context.Context, request *AddFaceRequest) (*AddFaceResponse, error) {
+	var (
+		// url = func() string {
+		// 	if len(host) < 9 /* 127.0.0.1 */ {
+		// 		host = "http://127.0.0.1:5000"
+		// 	} else {
+		// 		host = "http://127.0.0.1:5000"
+		// 	}
+		// }()
+		url = "http://127.0.0.1:5000"
+		opt = options.CurlOption()
+		req = struct {
+			Name     string `json:"name"`
+			FaceId   string `json:"faceid"`
+			VideoURL string `json:"videourl"`
+		}{
+			Name:     request.Name,
+			FaceId:   request.FaceId,
+			VideoURL: request.VideoURL,
+		}
+		result = struct {
+			Code    int             `json:"code"`    // Mã lỗi. Code 0: Thành công, Code != 0 Thất bại
+			Message string          `json:"message"` // Nội dung thông báo lỗi
+			Payload AddFaceResponse `json:"payload"`
+		}{}
+	)
+	data_json, err := json.Marshal(req)
+	if err != nil {
+		// xử lý lỗi
+	}
+	opt.SetMethod(http.MethodPost)
+	opt.SetTimeout(timeout)
+	opt.AddHeader("Content-Type", "application/json")
+	opt.SetJSON(data_json)
+
+	response, err := net.Curl(url, opt)
+	if err != nil {
+		return nil, err
+	}
+
+	// if response.StatusCode != http.StatusOK &&
+	// 	response.StatusCode > http.StatusNoContent {
+	// 	return response.StatusCode, nil, fmt.Errorf("reponse bad from %s with status %d", url, response.StatusCode)
+	// }
+
+	if err = json.Unmarshal(response.Body, &result); err != nil {
+		return nil, err
+	}
+	return &result.Payload, nil
+
+}

@@ -24,6 +24,19 @@ func getStoreClient(ctx context.Context) (_ *storage.Client, err error) {
 	}
 	return storageClient, nil
 }
+
+func getFileAttributes(ctx context.Context, uri, bucket string) (contentType string, size int64, err error) {
+	client, err := getStoreClient(ctx)
+	if err != nil {
+		return "", 0, err
+	}
+	o := client.Bucket(bucket).Object(uri)
+	attrs, err := o.Attrs(ctx)
+	if err != nil {
+		return "", 0, err
+	}
+	return attrs.ContentType, attrs.Size, nil
+}
 func SaveFaceImage(ctx context.Context, accId string, file []byte) (
 	uri string, err error) {
 	uri = accId + "/faceimage"
@@ -51,6 +64,51 @@ func SaveFaceImageFile(ctx context.Context, account_id, filename string, file []
 		return "", err
 	}
 	return uri, nil
+}
+func SaveEkycImageFile(ctx context.Context, student_id, filename string, file []byte) (string, error) {
+	var (
+		uri = fmt.Sprintf("%s/ekyc_%s", student_id, student_id)
+	)
+	info, err := cfg.Get(ctx)
+	if err != nil {
+		return "", err
+	}
+	if err := saveFile(ctx, uri, info.TerminalFileBucket, file); err != nil {
+		return "", err
+	}
+	return uri, nil
+}
+func SaveFaceVideoFile(ctx context.Context, student_id, filename string, file []byte) (string, error) {
+	var (
+		uri = fmt.Sprintf("%s/face_video_%s", student_id, student_id)
+		//uri_thumbnail = fmt.Sprintf("%s/face_thumbnail_%s", student_id, student_id)
+	)
+	info, err := cfg.Get(ctx)
+	if err != nil {
+		return "", err
+	}
+	// save video
+	if err := saveFile(ctx, uri, info.TerminalFileBucket, file); err != nil {
+		return "", err
+	}
+
+	return uri, nil
+}
+
+func SaveFaceThumnailFile(ctx context.Context, student_id, filename string, file []byte) (string, error) {
+	var (
+		uri_thumbnail = fmt.Sprintf("%s/face_thumbnail_%s", student_id, student_id)
+	)
+	info, err := cfg.Get(ctx)
+	if err != nil {
+		return "", err
+	}
+	// save video
+	if err := saveFile(ctx, uri_thumbnail, info.TerminalFileBucket, file); err != nil {
+		return "", err
+	}
+
+	return uri_thumbnail, nil
 }
 func saveFile(ctx context.Context, uri, bucket string, file []byte) (
 	err error) {

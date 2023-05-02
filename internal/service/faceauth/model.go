@@ -22,3 +22,14 @@ type FaceAuthSessionResponse struct {
 	Name   string `json:"name"`
 	FaceId string `json:"faceId"`
 }
+
+/* */
+type AddFaceRequest struct {
+	Name     string `json:"name"`
+	FaceId   string `json:"faceid"`
+	VideoURL string `json:"videourl"`
+}
+
+type AddFaceResponse struct {
+	Mesage string `json:"message"`
+}
