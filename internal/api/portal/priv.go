@@ -254,7 +254,7 @@ func __loginBasic(ctx context.Context,
 	// Select from DB
 	// check email exist, and check hashed password
 	// get info
-	docId, accountId, fullName, phoneNumber, birthday, unitId, isBlocked, err := fsdb.PersonProfile.CheckLogin(ctx, request.Email, request.Password)
+	docId, accountId, fullName, phoneNumber, birthday, role, unitId, isBlocked, err := fsdb.PersonProfile.CheckLogin(ctx, request.Email, request.Password)
 	if err != nil {
 		return loginBasicResponse{
 			Code:    model.StatusForbidden,
@@ -266,6 +266,7 @@ func __loginBasic(ctx context.Context,
 			Code:    model.StatusMethodNotAllowed,
 			Message: "account is blocked"}, errors.New("account is blocked")
 	}
+
 	// gen and save token
 	_, jwt_login, err := auth.GenerateJWTLoginSession(
 		ctx, login_session_id, accountId)
@@ -297,6 +298,7 @@ func __loginBasic(ctx context.Context,
 		Email:       request.Email,
 		PhoneNumber: phoneNumber,
 		Birthday:    birthday,
+		Role:        role,
 		UnitId:      unitId,
 		Token:       jwt_login.Token,
 		Avt:         "https://png.pngtree.com/png-clipart/20190924/original/pngtree-user-vector-avatar-png-image_4830521.jpg",
@@ -891,12 +893,29 @@ func __reportAuthSession(ctx context.Context, request *reportAuthSessionRequest)
 	var (
 		student_id = request.Payload.StudentId
 		month      = request.Payload.Month
+		year       = 2023
 	)
 	log.Println("student_id", student_id)
-	_, err := fsdb.AuthSession.ReportByMonth(ctx, student_id, month)
+	_, err := fsdb.AuthSession.ReportByMonth(ctx, student_id, month, year)
 	if err != nil {
 		return reportAuthSessionResponse{Code: model.StatusServiceUnavailable, Message: err.Error()}, err
 	}
 	return reportAuthSessionResponse{}, nil
+
+}
+
+func __filterReportAuthSession(ctx context.Context, request *filterReportAuthSessionRequest) (filterReportAuthSessionResponse, error) {
+
+	var (
+		student_id = request.StudentId
+		month      = request.Month
+		year       = request.Year
+	)
+	log.Println("student_id", student_id)
+	_, err := fsdb.AuthSession.ReportByMonth(ctx, student_id, int(month), year)
+	if err != nil {
+		return filterReportAuthSessionResponse{Code: model.StatusServiceUnavailable, Message: err.Error()}, err
+	}
+	return filterReportAuthSessionResponse{}, nil
 
 }

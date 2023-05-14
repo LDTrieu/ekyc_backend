@@ -1,6 +1,7 @@
 package portal
 
 import (
+	"ekyc-app/internal/cfg"
 	"ekyc-app/internal/fsdb"
 	"ekyc-app/internal/wUtil"
 	"ekyc-app/library/net"
@@ -10,6 +11,8 @@ import (
 	"fmt"
 	"log"
 	"net/http"
+	"strconv"
+	"time"
 
 	"github.com/gin-gonic/gin"
 	"go.mongodb.org/mongo-driver/bson/primitive"
@@ -61,9 +64,14 @@ func Reg(router *gin.Engine) {
 
 	// Mock
 	router.POST("portal/mock/auth-session/:reqId", mockAuthSession)
+	router.GET("portal/mock/env", testEnv)
 
 	// Report
 	router.POST("portal/report/auth-session/:reqId", reportAuthSession)
+	router.GET("portal/report/filter-auth-session/:reqId", filterReportAuthSession)
+
+	// /portal/user/download-pdf/
+	router.GET("portal/file/student-pdf/:reqId", mockDownloadPDF)
 
 }
 
@@ -354,6 +362,7 @@ func updateStudentFaceVideo(c *gin.Context) {
 		c.AbortWithError(http.StatusBadRequest, err)
 		return
 	}
+
 	filename, err := multipart_form.GetForm("filename")
 	if err != nil {
 		wlog.Error(c, err)
@@ -385,9 +394,18 @@ func updateStudentFaceVideo(c *gin.Context) {
 	// 	wlog.Error(c, err)
 	// }
 
+	var (
+		payload = student_face_video_resp{
+			URL: "https://www.w3schools.com/howto/img_avatar.png",
+		}
+		resp = updateStudentFaceVideoResponse{
+			Payload: payload,
+		}
+	)
+
 	// Trace client and result
-	// resp.traceField = request.traceField
-	// c.JSON(http.StatusOK, resp)
+	resp.traceField = request.traceField
+	c.JSON(http.StatusOK, resp)
 }
 
 /* */
@@ -841,6 +859,29 @@ func mockAuthSession(c *gin.Context) {
 	c.JSON(http.StatusOK, resp)
 }
 
+/* */
+func mockDownloadPDF(c *gin.Context) {
+	var (
+		request = mockDownloadPDFRequest{
+			traceField: traceField{
+				RequestId: c.Param("reqId"),
+			},
+
+			// Payload: update_student_data{
+			// 	IsBlocked: is_blocked,
+			// },
+		}
+		resp = mockDownloadPDFResponse{
+			Payload: mock_download_pdf_resp_data{
+				URL: "https://www.africau.edu/images/default/sample.pdf",
+			},
+		}
+	)
+	// Trace client and result
+	resp.traceField = request.traceField
+	c.JSON(http.StatusOK, resp)
+
+}
 func reportAuthSession(c *gin.Context) {
 	var (
 		request = reportAuthSessionRequest{
@@ -864,4 +905,51 @@ func reportAuthSession(c *gin.Context) {
 	// Trace client and result
 	resp.traceField = request.traceField
 	c.JSON(http.StatusOK, resp)
+}
+
+func filterReportAuthSession(c *gin.Context) {
+	month, err := strconv.Atoi(c.Query("month"))
+	if err != nil || month < 1 || month > 12 {
+		c.AbortWithError(http.StatusBadRequest, err)
+		return
+	}
+	year, err := strconv.Atoi(c.Query("year"))
+	if err != nil || year < 1900 || year > time.Now().Year() {
+		c.AbortWithError(http.StatusBadRequest, err)
+		return
+	}
+
+	var (
+		request = filterReportAuthSessionRequest{
+			traceField: traceField{
+				RequestId: c.Param("reqId"),
+			},
+			StudentId: c.Query("studentId"),
+		}
+	)
+
+	resp, err := __filterReportAuthSession(c.Request.Context(), &request)
+	if err != nil {
+		wlog.Error(c, err)
+	}
+	// Trace client and result
+	resp.traceField = request.traceField
+	c.JSON(http.StatusOK, resp)
+}
+
+func testEnv(ctx *gin.Context) {
+
+	info, err := cfg.Get(ctx)
+	if err != nil {
+		ctx.AbortWithError(http.StatusBadRequest, err)
+		return
+	}
+
+	ctx.JSON(
+		http.StatusOK,
+		gin.H{"status": "success",
+			"url_face_service": info.UrlFaceService,
+			"url_ekyc_service": info.UrlEkycService,
+		},
+	)
 }

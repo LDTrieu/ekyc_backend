@@ -50,6 +50,7 @@ type PersonProfileModel struct {
 	SessionId      string    `json:"sessionId" firestore:"session_id"`
 	Token          string    `json:"token" firestore:"token"`
 	FullName       string    `json:"fullname" firestore:"full_name"`
+	Role           string    `json:"role" firestore:"role"`
 	UnitId         string    `json:"unitId" firestore:"uit_id"`
 	Email          string    `json:"email" firestore:"email"`
 	PhoneNumber    string    `json:"phoneNumber" firestore:"phone_number"`
@@ -132,19 +133,19 @@ func (ins *personProfileFs) CreateIfNotExist(ctx context.Context, account_id, se
 }
 
 func (ins *personProfileFs) CheckLogin(ctx context.Context, email, password string) (
-	id, account_id, full_name, phone_number string, birthday time.Time, unit_id string, isBlocked bool, err error) {
+	id, account_id, full_name, phone_number string, birthday time.Time, role, unit_id string, isBlocked bool, err error) {
 	var (
 		temp PersonProfileModel
 	)
 	id, err = getOneEqual(ctx, &temp, ins.coll, ins.fieldEmail, email)
 	if err != nil {
-		return "", "", "", "", time.Time{}, "", false, errors.New("email or password invalid")
+		return "", "", "", "", time.Time{}, "", "", false, errors.New("email or password invalid")
 	}
 	if err := bcrypt.CompareHashAndPassword([]byte(temp.HashedPassword), []byte(password)); err != nil {
-		return "", "", "", "", time.Time{}, "", false, errors.New("email or password invalid")
+		return "", "", "", "", time.Time{}, "", "", false, errors.New("email or password invalid")
 	}
 
-	return id, temp.AccountId, temp.FullName, temp.PhoneNumber, temp.Birthday, temp.UnitId, temp.IsBlocked, nil
+	return id, temp.AccountId, temp.FullName, temp.PhoneNumber, temp.Birthday, temp.Role, temp.UnitId, temp.IsBlocked, nil
 }
 
 func (ins *personProfileFs) GetSessionID(ctx context.Context, token string) (
