@@ -96,7 +96,7 @@ func (ins *authSessionFs) GetAll(ctx context.Context) (
 	return list, nil
 }
 
-func (ins *authSessionFs) ReportByMonth(ctx context.Context, student_id string, month int) (
+func (ins *authSessionFs) ReportByMonth(ctx context.Context, student_id string, month, year int) (
 	[]*AuthSessionByDate, error) {
 	var (
 		list_model = make([]*AuthSessionModel, 0)
@@ -134,23 +134,8 @@ func (ins *authSessionFs) ReportByMonth(ctx context.Context, student_id string, 
 		return nil, err
 	}
 
-	// for k, v := range list {
-	// 	for key, value := range list_model {
-	// 		if value.AuthAt.Day() == list[k+1] {
-	// 			list[k].TimeIn = value.AuthAt
-	// 			if list[k].TimeIn < value.AuthAt {
-	// 				list[k].TimeOut = value.AuthAt
-	// 			}
-	// 			//list[k].TimeOut=value.
-	// 			//list1[i].b = list2[j].ab
-	// 			break
-	// 		}
-	// 	}
-	// }
-
-	// }
 	for k, v := range list_model {
-		log.Println("k: ", k, "value: ", v.AuthAt.Local().Location(), " ", v.AuthAt.Hour())
+		log.Println("k: ", k, "value: ", v.AuthAt.Day(), " ", v.AuthAt.Hour())
 	}
 	return list, nil
 }

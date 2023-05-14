@@ -12,6 +12,8 @@ type Info struct {
 	//FacepayPrePublic string `firestore:"facepay_account_service_public_key"`
 	LogBucket          string `firestore:"log_bucket"`
 	TerminalFileBucket string `firestore:"ekyc_file_bucket"`
+	UrlFaceService     string `firestore:"url_face_service"`
+	UrlEkycService     string `firestore:"url_ekyc_service"`
 }
 
 var (

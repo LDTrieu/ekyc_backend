@@ -16,5 +16,9 @@ func Test_Get(t *testing.T) {
 	if len(info.LogBucket) == 0 {
 		t.Fatal("log bucket invalid")
 	}
+	if len(info.LogBucket) == 0 {
+		t.Fatal("URL Face Auth invalid")
+	}
+
 	t.Fatal("OKE")
 }

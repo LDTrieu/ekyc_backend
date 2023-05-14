@@ -62,6 +62,7 @@ type login_basic_data struct {
 	LastName    string    `json:"lastName"`
 	Email       string    `json:"email"`
 	PhoneNumber string    `json:"phoneNumber"`
+	Role        string    `json:"role"`
 	UnitId      string    `json:"unitId"`
 	Birthday    time.Time `json:"birthday"`
 	Avt         string    `json:"avt"`
@@ -736,6 +737,30 @@ type mock_auth_session_req_data struct {
 }
 
 /* */
+type mockDownloadPDFRequest struct {
+	traceField
+	//Payload mock_download_pdf_req_data
+}
+
+type mockDownloadPDFResponse struct {
+	traceField
+	Code    int                         `json:"code"`
+	Message string                      `json:"message"`
+	Payload mock_download_pdf_resp_data `json:"payload"`
+}
+
+// type mock_download_pdf_req_data struct {
+// 	StudentId string `json:"studentId"`
+// 	// AuthAt    time.Time `json:"authAt"`
+// 	Date int `json:"date"`
+// 	Hour int `json:"hour"`
+// }
+
+type mock_download_pdf_resp_data struct {
+	URL string `json:"url"`
+}
+
+/* */
 
 type reportAuthSessionRequest struct {
 	traceField
@@ -764,4 +789,24 @@ type report_auth_session_data struct {
 	TimeIn       time.Time `json:"timeIn"`
 	TimeOut      time.Time `json:"timeOut"`
 	DurationTime time.Time `json:"durationTime"`
+}
+
+/* */
+type filterReportAuthSessionRequest struct {
+	traceField
+	StudentId string     `json:"studentId"`
+	Month     time.Month `json:"month" binding:"required"`
+	Year      int        `json:"year" binding:"required"`
+}
+
+type filterReportAuthSessionResponse struct {
+	traceField
+	Code    int                           `json:"code"`
+	Message string                        `json:"message"`
+	Payload report_auth_session_resp_data `json:"payload"`
+}
+
+type filter_report_session_resp_data struct {
+	TotalSessionByDate float32     `json:"totalSessionByDate"`
+	ListSessionByDate  []user_data `json:"listSessionByDate"`
 }

@@ -2,3 +2,8 @@
 *.b64
 *.png
 *.json
+
+
+# Key
+key.ppk
+

@@ -42,8 +42,9 @@ func Test_ReportByMonth(t *testing.T) {
 		ctx        = context.Background()
 		student_id = "n18dccn240"
 		month      = 4
+		year       = 2012
 	)
-	_, err := AuthSession.ReportByMonth(ctx, student_id, month)
+	_, err := AuthSession.ReportByMonth(ctx, student_id, month, year)
 	if err != nil {
 		t.Fatal("Err")
 	}
