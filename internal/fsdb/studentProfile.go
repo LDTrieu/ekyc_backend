@@ -291,7 +291,7 @@ func (ins *studentProfileFs) ValidateStudentId(ctx context.Context,
 
 func (ins *studentProfileFs) GetModelByStudentId(
 	ctx context.Context, student_id string) (
-	id string, info *StudentProfileModel, ok bool, err error) {
+	id string, info *StudentProfileModel, exist bool, err error) {
 	var (
 		temp StudentProfileModel
 	)
@@ -310,13 +310,13 @@ func (ins *studentProfileFs) GetByStudentId(
 	email, full_name, phone_number, national_id string,
 	birthday time.Time, sex, address, address_origin,
 	unit_id, image, image_ekyc, modified_by, created_by string,
-	modified_at, created_at time.Time, ok bool, err error) {
-	_, info, _, err := ins.GetModelByStudentId(ctx, student_id)
-	if err == model.ErrDocNotFound {
-		return "", "", "", "", time.Time{}, "", "", "", "", "", "", "", "", time.Time{}, time.Time{}, false, nil
-	}
+	modified_at, created_at time.Time, exist bool, err error) {
+	_, info, exist, err := ins.GetModelByStudentId(ctx, student_id)
 	if err != nil {
 		return "", "", "", "", time.Time{}, "", "", "", "", "", "", "", "", time.Time{}, time.Time{}, false, err
+	}
+	if exist == false {
+		return "", "", "", "", time.Time{}, "", "", "", "", "", "", "", "", time.Time{}, time.Time{}, false, nil
 	}
 	return info.Email, info.FullName, info.PhoneNumber, info.NationalId, info.Birthday, info.Sex, info.Address, info.PlaceOfOrigin,
 		info.UnitId, info.FaceImageURL, info.NationalIdCardURL, info.ModifiedBy, info.CreatedBy, info.ModifiedAt, info.CreatedAt, true, nil
@@ -324,13 +324,13 @@ func (ins *studentProfileFs) GetByStudentId(
 
 func (ins *studentProfileFs) GetNationIdByStudentId(
 	ctx context.Context, student_id string) (
-	doc_id, full_name, national_id string, ok bool, err error) {
-	doc_id, info, _, err := ins.GetModelByStudentId(ctx, student_id)
-	if err == model.ErrDocNotFound {
-		return "", "", "", false, nil
-	}
+	doc_id, full_name, national_id string, exist bool, err error) {
+	doc_id, info, exist, err := ins.GetModelByStudentId(ctx, student_id)
 	if err != nil {
 		return "", "", "", false, err
+	}
+	if exist == false {
+		return "", "", "", false, nil
 	}
 	return doc_id, info.FullName, info.NationalId, true, nil
 }

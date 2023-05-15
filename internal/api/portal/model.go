@@ -87,11 +87,10 @@ type signupBasicRequest struct {
 	Credentials
 	Permit      *auth.DataJWT
 	FullName    string    `json:"fullName"`
+	Role        string    `json:"role"`
 	UnitId      string    `json:"unitId"`
 	PhoneNumber string    `json:"phoneNumber"`
 	DateOfBirth time.Time `json:"dateOfBirth"`
-
-	// some fields
 }
 
 type signupBasicResponse struct {
@@ -182,10 +181,11 @@ type user_detail_data struct {
 	AccountId   string `json:"accountId"`
 	FullName    string `json:"fullName"`
 	Email       string `json:"email"`
+	Role        string `json:"role"`
 	UnitId      string `json:"unitId"`
 	PhoneNumber string `json:"phoneNumber"`
 	IsBlocked   bool   `json:"isBlocked"`
-	// ModifiedBy  string    `json:"modifiedBy"`
+	//ModifiedBy  string    `json:"modifiedBy"`
 	LastLoginAt time.Time `json:"lastLoginAt"`
 	CreatedBy   string    `json:"createdBy"`
 	CreatedAt   time.Time `json:"createdAt"`

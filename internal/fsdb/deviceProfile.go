@@ -155,7 +155,7 @@ func (ins *deviceProfileFs) ValidateTerminalId(ctx context.Context,
 }
 func (ins *deviceProfileFs) GetModelByTerminalId(
 	ctx context.Context, terminal_id string) (
-	id string, info *DeviceProfileModel, ok bool, err error) {
+	id string, info *DeviceProfileModel, exist bool, err error) {
 	var (
 		temp DeviceProfileModel
 	)
@@ -173,14 +173,15 @@ func (ins *deviceProfileFs) GetByTerminalId(
 	ctx context.Context, terminal_id string) (
 	terminal_name, avt string,
 	is_blocked bool, modified_by, created_by string,
-	last_login_at, modified_at, created_at time.Time, ok bool, err error) {
-	_, info, _, err := ins.GetModelByTerminalId(ctx, terminal_id)
-	if err == model.ErrDocNotFound {
-		return "", "", true, "", "", time.Time{}, time.Time{}, time.Time{}, false, err
-	}
+	last_login_at, modified_at, created_at time.Time, exist bool, err error) {
+	_, info, exist, err := ins.GetModelByTerminalId(ctx, terminal_id)
 	if err != nil {
+		return "", "", true, "", "", time.Time{}, time.Time{}, time.Time{}, true, err
+	}
+	if exist == false {
 		return "", "", true, "", "", time.Time{}, time.Time{}, time.Time{}, false, err
 	}
+
 	return info.TerminalName, info.Avatar, false,
 		info.ModifiedBy, info.CreatedBy,
 		info.LastLoginAt, info.ModifiedAt, info.CreatedAt, true, nil

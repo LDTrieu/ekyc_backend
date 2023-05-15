@@ -353,7 +353,7 @@ func __signupBasic(ctx context.Context,
 	accountId := primitive.NewObjectID().Hex()
 	sessionId := uuid.NewString()
 	info, _, err := fsdb.PersonProfile.CreateSignupProfile(ctx, accountId, sessionId,
-		request.Email, request.PhoneNumber, request.FullName, request.UnitId, string(hashedPassword), request.Permit.AccountID)
+		request.Email, request.PhoneNumber, request.FullName, request.Role, request.UnitId, string(hashedPassword), request.Permit.AccountID)
 	if err != nil {
 		return signupBasicResponse{
 			Code:    model.StatusInternalServerError,
@@ -412,6 +412,7 @@ func __userDetail(ctx context.Context, request *userDetailRequest) (userDetailRe
 			FullName:    db_user.FullName,
 			Email:       db_user.Email,
 			PhoneNumber: db_user.PhoneNumber,
+			Role:        db_user.Role,
 			UnitId:      db_user.UnitId,
 			IsBlocked:   db_user.IsBlocked,
 			LastLoginAt: db_user.LastLoginAt,
@@ -535,11 +536,11 @@ func __updateStudentEkyc(ctx context.Context, request *updateStudentEkycRequest)
 /* */
 // __updateStudentFaceVideo
 func __uploadStudentFaceVideo(ctx context.Context, request *updateStudentFaceVideoRequest) (updateStudentFaceVideoResponse, error) {
-	doc_id, _, _, ok, err := fsdb.StudentProfile.GetNationIdByStudentId(ctx, request.Payload.StudentId)
+	doc_id, _, _, exist, err := fsdb.StudentProfile.GetNationIdByStudentId(ctx, request.Payload.StudentId)
 	if err != nil {
 		return updateStudentFaceVideoResponse{Code: model.StatusServiceUnavailable, Message: err.Error()}, err
 	}
-	if !ok {
+	if !exist {
 		return updateStudentFaceVideoResponse{Code: model.StatusNotFound, Message: "NOT_FOUND"}, errors.New("student_id does not exist")
 	}
 	// save face-video to DB
@@ -576,11 +577,11 @@ func __uploadStudentFaceVideo(ctx context.Context, request *updateStudentFaceVid
 func __studentDetail(ctx context.Context, request *studentDetailRequest) (studentDetailResponse, error) {
 	email, full_name, phone_number, national_id,
 		birthday, sex, address, address_origin, unit_id, image, image_ekyc, modified_by, created_by,
-		modified_at, created_at, ok, err := fsdb.StudentProfile.GetByStudentId(ctx, request.StudentId)
+		modified_at, created_at, exist, err := fsdb.StudentProfile.GetByStudentId(ctx, request.StudentId)
 	if err != nil {
 		return studentDetailResponse{Code: model.StatusServiceUnavailable, Message: err.Error()}, err
 	}
-	if !ok {
+	if !exist {
 		return studentDetailResponse{Code: model.StatusNotFound, Message: "NOT FOUND"}, errors.New("student_id does not exist")
 	}
 
@@ -721,11 +722,11 @@ func __djangoFaceVideo(ctx context.Context, request *uploadNationalIdImageReques
 
 /* */
 func __uploadNationalIdImage(ctx context.Context, request *uploadNationalIdImageRequest) (uploadNationalIdImageResponse, error) {
-	doc_id, _, _, ok, err := fsdb.StudentProfile.GetNationIdByStudentId(ctx, request.Payload.StudentId)
+	doc_id, _, _, exist, err := fsdb.StudentProfile.GetNationIdByStudentId(ctx, request.Payload.StudentId)
 	if err != nil {
 		return uploadNationalIdImageResponse{Code: model.StatusServiceUnavailable, Message: err.Error()}, err
 	}
-	if !ok {
+	if !exist {
 		return uploadNationalIdImageResponse{Code: model.StatusNotFound, Message: "NOT_FOUND"}, errors.New("student_id does not exist")
 	}
 	// save image to DB
@@ -820,12 +821,13 @@ func __filterListDevice(ctx context.Context,
 /* */
 func __deviceDetail(ctx context.Context, request *deviceDetailRequest) (deviceDetailResponse, error) {
 	terminal_name, avt, is_blocked, modified_by, created_by,
-		last_login_at, modified_at, created_at, ok, err := fsdb.DeviceProfile.GetByTerminalId(ctx, request.TerminalId)
+		last_login_at, modified_at, created_at, exist, err := fsdb.DeviceProfile.GetByTerminalId(ctx, request.TerminalId)
+
 	if err != nil {
 		return deviceDetailResponse{Code: model.StatusServiceUnavailable, Message: err.Error()}, err
 	}
-	if !ok {
-		return deviceDetailResponse{Code: model.StatusNotFound, Message: "NOT FOUND"}, errors.New("student_id does not exist")
+	if !exist {
+		return deviceDetailResponse{Code: model.StatusNotFound, Message: "NOT FOUND"}, errors.New("terminal_id does not exist")
 	}
 
 	return deviceDetailResponse{

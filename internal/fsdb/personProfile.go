@@ -84,7 +84,7 @@ func (ins *personProfileFs) CreateSignupProfile(
 	ctx context.Context,
 	account_id, session_id,
 	email, phone_number,
-	full_name, unit_id, hashed_password, created_by string) (
+	full_name, role, unit_id, hashed_password, created_by string) (
 	*PersonProfileModel, bool, error) {
 	// make new data and insert db
 	person_new := PersonProfileModel{
@@ -93,6 +93,7 @@ func (ins *personProfileFs) CreateSignupProfile(
 		Email:          email,
 		PhoneNumber:    phone_number,
 		FullName:       full_name,
+		Role:           role,
 		UnitId:         unit_id,
 		HashedPassword: hashed_password,
 		IsBlocked:      false,
@@ -106,11 +107,11 @@ func (ins *personProfileFs) CreateSignupProfile(
 	return &person_new, false, nil
 }
 func (ins *personProfileFs) CreateIfNotExist(ctx context.Context, account_id, session_id, token string) (*PersonProfileModel, bool, error) {
-	id, inf, ok, err := ins.GetByAccountId(ctx, account_id)
+	id, inf, exist, err := ins.GetByAccountId(ctx, account_id)
 	if err != nil {
 		return nil, false, err
 	}
-	if ok {
+	if exist {
 		// update token
 		if err := ins.SetToken(ctx, id, session_id, token); err != nil {
 			return nil, false, err
@@ -149,7 +150,7 @@ func (ins *personProfileFs) CheckLogin(ctx context.Context, email, password stri
 }
 
 func (ins *personProfileFs) GetSessionID(ctx context.Context, token string) (
-	id string, session_id string, ok bool, err error) {
+	id string, session_id string, exist bool, err error) {
 	var (
 		temp PersonProfileModel
 	)
@@ -164,7 +165,7 @@ func (ins *personProfileFs) GetSessionID(ctx context.Context, token string) (
 }
 
 func (ins *personProfileFs) GetByAccountId(ctx context.Context, account_id string) (
-	id string, info *PersonProfileModel, ok bool, err error) {
+	id string, info *PersonProfileModel, exist bool, err error) {
 	var (
 		temp PersonProfileModel
 	)
@@ -175,11 +176,12 @@ func (ins *personProfileFs) GetByAccountId(ctx context.Context, account_id strin
 	if err != nil {
 		return "", nil, false, err
 	}
+
 	return id, &temp, true, nil
 }
 
 func (ins *personProfileFs) GetByEmail(ctx context.Context, email string) (
-	id string, info *PersonProfileModel, ok bool, err error) {
+	id string, info *PersonProfileModel, exist bool, err error) {
 	var (
 		temp PersonProfileModel
 	)
@@ -194,7 +196,7 @@ func (ins *personProfileFs) GetByEmail(ctx context.Context, email string) (
 
 }
 func (ins *personProfileFs) GetByPhone(ctx context.Context, numberPhone string) (
-	id string, info *PersonProfileModel, ok bool, err error) {
+	id string, info *PersonProfileModel, exist bool, err error) {
 	var (
 		temp PersonProfileModel
 	)
@@ -211,7 +213,7 @@ func (ins *personProfileFs) GetByPhone(ctx context.Context, numberPhone string) 
 
 func (ins *personProfileFs) GetAccountIdByToken(
 	ctx context.Context, token string) (
-	id string, account_id string, ok bool, err error) {
+	id string, account_id string, exist bool, err error) {
 	var (
 		temp PersonProfileModel
 	)

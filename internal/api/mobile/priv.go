@@ -334,11 +334,14 @@ func __faceAuthSession(ctx context.Context, request *faceAuthSessionRequest) (fa
 	)
 
 	// get name, face_id, student_id
-	_, full_name, _, _, _, _, _, _, unit_id, _, _, _, _, _, _, _, err := fsdb.StudentProfile.GetByStudentId(ctx, student_id)
+	_, full_name, _, _, _, _, _, _, unit_id, _, _, _, _, _, _, exist, err := fsdb.StudentProfile.GetByStudentId(ctx, student_id)
 	if err != nil {
 		return faceAuthSessionResponse{
 			Code:    model.StatusServiceUnavailable,
 			Message: err.Error()}, err
+	}
+	if !exist {
+		return faceAuthSessionResponse{Code: model.StatusNotFound, Message: "NOT FOUND"}, errors.New("student_id does not exist")
 	}
 
 	// log session to db

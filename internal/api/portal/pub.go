@@ -731,10 +731,11 @@ func deviceDetail(c *gin.Context) {
 			TerminalId: c.Query("terminalId"),
 		}
 	)
-	resp, err := __deviceDetail(
-		c.Request.Context(), &request)
+	resp, err := __deviceDetail(c.Request.Context(), &request)
 	if err != nil {
+		log.Println("ERR: ", err)
 		wlog.Error(c, err)
+
 	}
 	// Trace client and result
 	resp.traceField = request.traceField
