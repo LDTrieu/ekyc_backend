@@ -1,8 +1,8 @@
 run:
-  go run main.go
+	go run main.go
 
 up:
-  docker-compose up -d
+	docker-compose up -d
 
 down:
-  docker-compose down -d
+	docker-compose down -d
